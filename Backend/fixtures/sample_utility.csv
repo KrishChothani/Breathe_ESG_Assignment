@@ -1,0 +1,11 @@
+AccountNumber,MeterID,SiteName,BillingStart,BillingEnd,Consumption,Unit,TariffBand
+ACC-SITE-A,MTR001,London HQ,2024-03-15,2024-04-18,1840.00,kWh,Standard
+ACC-SITE-A,MTR001,London HQ,2024-03-15,2024-04-18,420.00,kWh,Peak
+ACC-SITE-A,MTR001,London HQ,2024-03-15,2024-04-18,380.00,kWh,Off-Peak
+ACC-SITE-A,MTR001,London HQ,2024-03-15,2024-04-18,0.00,kWh,Standard
+ACC-SITE-B,MTR002,Manchester Office,2024-03-15,2024-04-18,3100.00,kWh,Standard
+ACC-SITE-B,MTR002,Manchester Office,2024-03-15,2024-04-18,750.00,kWh,Peak
+ACC-SITE-B,MTR002,Manchester Office,2024-03-15,2024-04-18,680.00,kWh,Off-Peak
+ACC-SITE-B,MTR002,Manchester Office,2024-03-15,2024-04-18,2200.00,kVAh,Standard
+ACC-SITE-A,MTR001,London HQ,2024-03-15,2024-04-18,510.00,kWh,Standard
+ACC-SITE-B,MTR002,Manchester Office,2024-03-15,2024-04-18,290.00,kWh,Peak

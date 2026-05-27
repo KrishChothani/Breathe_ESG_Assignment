@@ -1,0 +1,14 @@
+[
+  {"iata_code": "BOM", "iata": "BOM", "airport_name": "Chhatrapati Shivaji Maharaj International", "name": "Chhatrapati Shivaji Maharaj International", "city": "Mumbai",    "country": "IN", "lat": 19.0896,  "lon": 72.8656},
+  {"iata_code": "DEL", "iata": "DEL", "airport_name": "Indira Gandhi International",              "name": "Indira Gandhi International",              "city": "New Delhi",  "country": "IN", "lat": 28.5562,  "lon": 77.1000},
+  {"iata_code": "LHR", "iata": "LHR", "airport_name": "Heathrow",                                "name": "Heathrow",                                "city": "London",     "country": "GB", "lat": 51.4700,  "lon": -0.4543},
+  {"iata_code": "CDG", "iata": "CDG", "airport_name": "Charles de Gaulle",                       "name": "Charles de Gaulle",                       "city": "Paris",      "country": "FR", "lat": 49.0097,  "lon": 2.5479},
+  {"iata_code": "AMS", "iata": "AMS", "airport_name": "Amsterdam Schiphol",                      "name": "Amsterdam Schiphol",                      "city": "Amsterdam",  "country": "NL", "lat": 52.3086,  "lon": 4.7639},
+  {"iata_code": "JFK", "iata": "JFK", "airport_name": "John F Kennedy International",            "name": "John F Kennedy International",            "city": "New York",   "country": "US", "lat": 40.6413,  "lon": -73.7781},
+  {"iata_code": "DXB", "iata": "DXB", "airport_name": "Dubai International",                    "name": "Dubai International",                    "city": "Dubai",      "country": "AE", "lat": 25.2532,  "lon": 55.3657},
+  {"iata_code": "SIN", "iata": "SIN", "airport_name": "Singapore Changi",                        "name": "Singapore Changi",                        "city": "Singapore",  "country": "SG", "lat": 1.3644,   "lon": 103.9915},
+  {"iata_code": "FRA", "iata": "FRA", "airport_name": "Frankfurt am Main",                       "name": "Frankfurt am Main",                       "city": "Frankfurt",  "country": "DE", "lat": 50.0379,  "lon": 8.5622},
+  {"iata_code": "HKG", "iata": "HKG", "airport_name": "Hong Kong International",                 "name": "Hong Kong International",                 "city": "Hong Kong",  "country": "HK", "lat": 22.3080,  "lon": 113.9185},
+  {"iata_code": "NRT", "iata": "NRT", "airport_name": "Narita International",                    "name": "Narita International",                    "city": "Tokyo",      "country": "JP", "lat": 35.7653,  "lon": 140.3864},
+  {"iata_code": "SYD", "iata": "SYD", "airport_name": "Kingsford Smith",                         "name": "Kingsford Smith",                         "city": "Sydney",     "country": "AU", "lat": -33.9399, "lon": 151.1753}
+]

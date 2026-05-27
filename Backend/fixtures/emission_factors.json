@@ -1,0 +1,24 @@
+[
+    {
+        "type": "grid",
+        "country": "UK",
+        "year": 2023,
+        "factor": 0.23314
+    },
+    {
+        "type": "grid",
+        "country": "US",
+        "year": 2023,
+        "factor": 0.385
+    },
+    {
+        "type": "travel",
+        "category": "flight_short_economy",
+        "factor": 0.15102
+    },
+    {
+        "type": "travel",
+        "category": "flight_long_business",
+        "factor": 0.59925
+    }
+]

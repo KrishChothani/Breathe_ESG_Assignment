@@ -1,0 +1,269 @@
+[
+  {
+    "externalTripId": "EXT-TRIP-001",
+    "traveler": {
+      "email": "ravi.sharma@acme.com",
+      "firstName": "Ravi",
+      "lastName": "Sharma",
+      "employeeId": "EMP1042"
+    },
+    "tripName": "Mumbai to London Business Trip",
+    "tripDescription": "Q1 2024 client meetings at London HQ",
+    "startDate": "2024-03-10",
+    "endDate": "2024-03-13",
+    "bookingSource": "Navan",
+    "segments": [
+      {
+        "type": "AIR",
+        "segmentId": "SEG-001-A1",
+        "confirmationNumber": "AIIND101",
+        "carrier": "AI",
+        "flightNumber": "AI101",
+        "departureAirportCode": "BOM",
+        "arrivalAirportCode": "LHR",
+        "departureDateTime": "2024-03-10T01:45:00+05:30",
+        "arrivalDateTime": "2024-03-10T07:30:00+00:00",
+        "cabinClass": "BUSINESS",
+        "fareClass": "J",
+        "numberOfPassengers": 1,
+        "cost": { "amount": 145000.00, "currency": "INR" },
+        "ticketNumber": "098-1234567890",
+        "stops": 0,
+        "operatingCarrier": "AI"
+      },
+      {
+        "type": "HOTEL",
+        "segmentId": "SEG-001-H1",
+        "confirmationNumber": "SAVOY-2024-XK99",
+        "hotelName": "The Savoy",
+        "chainCode": "FF",
+        "propertyId": "SAVOY-LHR-01",
+        "checkInDate": "2024-03-10",
+        "checkOutDate": "2024-03-13",
+        "numberOfNights": 3,
+        "numberOfRooms": 1,
+        "roomType": "Deluxe King",
+        "address": {
+          "street": "Strand",
+          "city": "London",
+          "state": "",
+          "country": "GB",
+          "postalCode": "WC2R 0EU"
+        },
+        "cost": { "amount": 1800.00, "currency": "GBP" }
+      },
+      {
+        "type": "AIR",
+        "segmentId": "SEG-001-A2",
+        "confirmationNumber": "AIIND102",
+        "carrier": "AI",
+        "flightNumber": "AI102",
+        "departureAirportCode": "LHR",
+        "arrivalAirportCode": "BOM",
+        "departureDateTime": "2024-03-13T21:00:00+00:00",
+        "arrivalDateTime": "2024-03-14T10:30:00+05:30",
+        "cabinClass": "ECONOMY",
+        "fareClass": "Y",
+        "numberOfPassengers": 1,
+        "cost": { "amount": 52000.00, "currency": "INR" },
+        "stops": 0,
+        "operatingCarrier": "AI"
+      },
+      {
+        "type": "CAR",
+        "segmentId": "SEG-001-C1",
+        "confirmationNumber": "HERTZ-LHR-9871",
+        "vendor": "Hertz",
+        "vendorCode": "ZE",
+        "carCategory": "MIDSIZE",
+        "fuelType": "PETROL",
+        "pickUpDateTime": "2024-03-10T08:30:00+00:00",
+        "dropOffDateTime": "2024-03-10T09:15:00+00:00",
+        "pickUpLocation": {
+          "city": "London",
+          "country": "GB",
+          "airportCode": "LHR"
+        },
+        "dropOffLocation": {
+          "city": "London",
+          "country": "GB",
+          "airportCode": null
+        },
+        "estimatedDistanceKm": 35.0,
+        "cost": { "amount": 85.00, "currency": "GBP" }
+      }
+    ]
+  },
+  {
+    "externalTripId": "EXT-TRIP-002",
+    "traveler": {
+      "email": "priya.mehta@acme.com",
+      "firstName": "Priya",
+      "lastName": "Mehta",
+      "employeeId": "EMP2031"
+    },
+    "tripName": "Delhi Conference",
+    "tripDescription": "ESG Summit 2024 — New Delhi",
+    "startDate": "2024-03-15",
+    "endDate": "2024-03-17",
+    "bookingSource": "DIRECT",
+    "segments": [
+      {
+        "type": "AIR",
+        "segmentId": "SEG-002-A1",
+        "confirmationNumber": "6EIND201",
+        "carrier": "6E",
+        "flightNumber": "6E201",
+        "departureAirportCode": "BOM",
+        "arrivalAirportCode": "DEL",
+        "departureDateTime": "2024-03-15T06:00:00+05:30",
+        "arrivalDateTime": "2024-03-15T08:10:00+05:30",
+        "cabinClass": "ECONOMY",
+        "fareClass": "S",
+        "numberOfPassengers": 1,
+        "cost": { "amount": 8500.00, "currency": "INR" },
+        "stops": 0,
+        "operatingCarrier": "6E"
+      },
+      {
+        "type": "HOTEL",
+        "segmentId": "SEG-002-H1",
+        "confirmationNumber": "TAJ-DEL-7721",
+        "hotelName": "Taj Palace New Delhi",
+        "chainCode": "TJ",
+        "checkInDate": "2024-03-15",
+        "checkOutDate": "2024-03-17",
+        "numberOfNights": null,
+        "numberOfRooms": 1,
+        "roomType": "Deluxe Room",
+        "address": {
+          "street": "Sardar Patel Marg, Diplomatic Enclave",
+          "city": "New Delhi",
+          "state": "Delhi",
+          "country": "IN",
+          "postalCode": "110021"
+        },
+        "cost": { "amount": 22000.00, "currency": "INR" }
+      },
+      {
+        "type": "GROUND_TRANSPORT",
+        "segmentId": "SEG-002-G1",
+        "subType": "TAXI",
+        "provider": "Ola",
+        "pickUpDateTime": "2024-03-15T08:30:00+05:30",
+        "dropOffDateTime": "2024-03-15T09:15:00+05:30",
+        "pickUpAddress": "Indira Gandhi International Airport, New Delhi",
+        "dropOffAddress": "Taj Palace, Sardar Patel Marg, New Delhi",
+        "distanceKm": null,
+        "cost": { "amount": 650.00, "currency": "INR" }
+      },
+      {
+        "type": "RAIL",
+        "segmentId": "SEG-002-R1",
+        "confirmationNumber": "IRCTC-20240317-88221",
+        "carrier": "Indian Railways",
+        "trainNumber": "12001",
+        "departureStationCode": "NDLS",
+        "arrivalStationCode": "AGC",
+        "departureDateTime": "2024-03-17T06:00:00+05:30",
+        "arrivalDateTime": "2024-03-17T07:55:00+05:30",
+        "travelClass": "FIRST",
+        "numberOfPassengers": 1,
+        "cost": { "amount": 2200.00, "currency": "INR" }
+      }
+    ]
+  },
+  {
+    "externalTripId": "EXT-TRIP-003",
+    "traveler": {
+      "email": "john.doe@acme.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "employeeId": "EMP3017"
+    },
+    "tripName": "Europe Road Trip",
+    "tripDescription": "Paris → Amsterdam business travel Q1 2024",
+    "startDate": "2024-03-20",
+    "endDate": "2024-03-24",
+    "bookingSource": "Navan",
+    "segments": [
+      {
+        "type": "AIR",
+        "segmentId": "SEG-003-A1-INVALID",
+        "confirmationNumber": "INVALID-SAME-ROUTE",
+        "carrier": "XX",
+        "flightNumber": "XX999",
+        "departureAirportCode": "BOM",
+        "arrivalAirportCode": "BOM",
+        "departureDateTime": "2024-03-20T08:00:00+05:30",
+        "arrivalDateTime": "2024-03-20T08:00:00+05:30",
+        "cabinClass": null,
+        "numberOfPassengers": 1,
+        "cost": { "amount": 0.00, "currency": "INR" },
+        "stops": 0
+      },
+      {
+        "type": "CAR",
+        "segmentId": "SEG-003-C1",
+        "confirmationNumber": "AVIS-CDG-4411",
+        "vendor": "Avis",
+        "vendorCode": "ZI",
+        "carCategory": "SUV",
+        "fuelType": "ELECTRIC",
+        "pickUpDateTime": "2024-03-20T10:00:00+01:00",
+        "dropOffDateTime": "2024-03-21T14:00:00+01:00",
+        "pickUpLocation": {
+          "city": "Paris",
+          "country": "FR",
+          "airportCode": "CDG"
+        },
+        "dropOffLocation": {
+          "city": "Amsterdam",
+          "country": "NL",
+          "airportCode": "AMS"
+        },
+        "estimatedDistanceKm": 520.0,
+        "cost": { "amount": 380.00, "currency": "EUR" }
+      },
+      {
+        "type": "GROUND_TRANSPORT",
+        "segmentId": "SEG-003-G1",
+        "subType": "RIDESHARE",
+        "provider": "Uber",
+        "pickUpDateTime": "2024-03-21T15:00:00+01:00",
+        "dropOffDateTime": "2024-03-21T15:25:00+01:00",
+        "pickUpAddress": "Amsterdam Centraal Station",
+        "dropOffAddress": "Marriott Amsterdam, Stadhouderskade 12",
+        "distanceKm": 12.5,
+        "cost": { "amount": 45.00, "currency": "EUR" }
+      },
+      {
+        "type": "HOTEL",
+        "segmentId": "SEG-003-H1",
+        "confirmationNumber": "MC-AMS-330019",
+        "hotelName": "Marriott Amsterdam",
+        "chainCode": "MC",
+        "propertyId": "AMSTMC",
+        "checkInDate": "2024-03-21",
+        "checkOutDate": "2024-03-24",
+        "numberOfNights": 3,
+        "numberOfRooms": 2,
+        "roomType": "Standard King",
+        "address": {
+          "street": "Stadhouderskade 12",
+          "city": "Amsterdam",
+          "state": "",
+          "country": "NL",
+          "postalCode": "1054 ES"
+        },
+        "cost": { "amount": 720.00, "currency": "EUR" }
+      },
+      {
+        "type": null,
+        "segmentId": "SEG-003-NULL-TYPE",
+        "confirmationNumber": "UNKNOWN",
+        "cost": { "amount": 0.00, "currency": "EUR" }
+      }
+    ]
+  }
+]

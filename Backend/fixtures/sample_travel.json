@@ -1,0 +1,100 @@
+{
+  "Items": [
+    {
+      "report_id": "RPT001",
+      "entry_id": "ENT001-1",
+      "expense_type": "AIRFR",
+      "origin": "BOM",
+      "destination": "LHR",
+      "cabin_class": "Y",
+      "amount": 45000,
+      "currency": "INR",
+      "transaction_date": "2024-03-10",
+      "traveller": "priya.sharma@company.com",
+      "trip_name": "London Sales Summit",
+      "approved_by": "manager@company.com"
+    },
+    {
+      "report_id": "RPT001",
+      "entry_id": "ENT001-2",
+      "expense_type": "AIRFR",
+      "origin": "DEL",
+      "destination": "SIN",
+      "cabin_class": "C",
+      "amount": 120000,
+      "currency": "INR",
+      "transaction_date": "2024-03-12",
+      "traveller": "rajesh.kumar@company.com",
+      "trip_name": "Singapore Partner Meetings",
+      "approved_by": "manager@company.com"
+    },
+    {
+      "report_id": "RPT002",
+      "entry_id": "ENT002-1",
+      "expense_type": "HTLSU",
+      "destination": "London",
+      "room_nights": null,
+      "check_in": "2024-03-10",
+      "check_out": "2024-03-13",
+      "amount": 78000,
+      "currency": "INR",
+      "transaction_date": "2024-03-13",
+      "traveller": "priya.sharma@company.com",
+      "trip_name": "London Sales Summit",
+      "approved_by": "manager@company.com"
+    },
+    {
+      "report_id": "RPT003",
+      "entry_id": "ENT003-1",
+      "expense_type": null,
+      "amount": 3200,
+      "currency": "INR",
+      "transaction_date": "2024-03-14",
+      "traveller": "ankit.mehta@company.com",
+      "trip_name": "Unknown Expense",
+      "approved_by": null
+    },
+    {
+      "report_id": "RPT002",
+      "entry_id": "ENT002-2",
+      "expense_type": "AIRFR",
+      "origin": "LHR",
+      "destination": "JFK",
+      "cabin_class": "F",
+      "amount": 250000,
+      "currency": "INR",
+      "transaction_date": "2024-03-15",
+      "traveller": "rajesh.kumar@company.com",
+      "trip_name": "New York Board Meeting",
+      "approved_by": "manager@company.com"
+    },
+    {
+      "report_id": "RPT004",
+      "entry_id": "ENT004-1",
+      "expense_type": "TAXIX",
+      "origin": "LHR",
+      "destination": "London City Centre",
+      "amount": 8500,
+      "currency": "INR",
+      "transaction_date": "2024-03-10",
+      "traveller": "priya.sharma@company.com",
+      "trip_name": "London Sales Summit",
+      "approved_by": "manager@company.com"
+    },
+    {
+      "report_id": "RPT005",
+      "entry_id": "ENT005-1",
+      "expense_type": "CARRT",
+      "origin": "SFO",
+      "destination": "SFO",
+      "amount": 15000,
+      "currency": "USD",
+      "transaction_date": "2024-03-20",
+      "traveller": "ankit.mehta@company.com",
+      "trip_name": "Bay Area Client Visit",
+      "approved_by": "manager@company.com"
+    }
+  ],
+  "NextPage": null,
+  "TotalCount": 7
+}
