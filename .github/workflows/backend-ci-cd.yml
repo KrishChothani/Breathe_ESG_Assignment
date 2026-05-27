@@ -48,7 +48,7 @@ jobs:
         id: get-ip
         run: |
           EC2_IP=$(aws ec2 describe-instances \
-            --instance-ids i-0486c5d7b6effc739 \
+            --instance-ids i-0f007aabc48ef43f0 \
             --query 'Reservations[0].Instances[0].PublicIpAddress' \
             --output text)
           echo "ec2_ip=$EC2_IP" >> $GITHUB_OUTPUT
