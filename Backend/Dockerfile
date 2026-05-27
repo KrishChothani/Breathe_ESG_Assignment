@@ -53,9 +53,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Install wheels built in the builder stage
+# (all deps are pre-compiled; no requirements file needed in the runtime stage)
 COPY --from=builder /wheels/dist /wheels/dist
 RUN pip install --no-cache-dir --no-index --find-links=/wheels/dist \
-    -r /wheels/requirements/production.txt \
+        /wheels/dist/*.whl \
     && rm -rf /wheels
 
 # Copy application source
