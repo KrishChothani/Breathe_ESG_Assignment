@@ -57,9 +57,10 @@ jobs:
       - name: Deploy and restart Docker container on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host:     ${{ steps.get-ip.outputs.ec2_ip }}
-          username: ubuntu
-          key:      ${{ secrets.EC2_SSH_KEY }}
+          host:         ${{ steps.get-ip.outputs.ec2_ip }}
+          username:     ubuntu
+          key:          ${{ secrets.EC2_SSH_KEY }}
+          script_stop:  false   # don't abort on "no such container" errors
           script: |
             # ── Install Docker if not present (idempotent) ──────────────────
             if ! command -v docker &> /dev/null; then
