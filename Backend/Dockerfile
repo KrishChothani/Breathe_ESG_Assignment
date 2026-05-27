@@ -67,8 +67,10 @@ RUN DJANGO_SECRET_KEY=collectstatic-dummy \
     DATABASE_URL=sqlite:///tmp/dummy.db \
     python manage.py collectstatic --noinput --clear
 
-# Give the non-root user ownership over writable directories
-RUN chown -R django:django /app/staticfiles /app/media
+# Ensure writable directories exist, then hand them to the non-root user
+# (media/ is excluded from the build context by .dockerignore, so we create it here)
+RUN mkdir -p /app/media /app/staticfiles \
+    && chown -R django:django /app/staticfiles /app/media
 
 USER django
 
