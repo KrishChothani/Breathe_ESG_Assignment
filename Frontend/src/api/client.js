@@ -1,8 +1,11 @@
 import axios from 'axios'
 import { TOKEN_KEY, REFRESH_KEY } from '../utils/constants'
 
+// Single source of truth — set VITE_API_BASE_URL in Frontend/.env
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+
 const client = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -27,7 +30,7 @@ client.interceptors.response.use(
       const refresh = getRefresh()
       if (refresh) {
         try {
-          const { data } = await axios.post('/api/v1/auth/refresh/', { refresh })
+          const { data } = await axios.post(`${API_BASE}/auth/refresh/`, { refresh })
           // Store under both key names to keep everything in sync
           localStorage.setItem(TOKEN_KEY,       data.access)
           localStorage.setItem('access_token',  data.access)

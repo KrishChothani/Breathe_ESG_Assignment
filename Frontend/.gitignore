@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables — never commit local secrets / URLs
+.env
+.env.*
+!.env.example
