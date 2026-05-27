@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user for security
-RUN groupadd --system django && useradd --system --gid django --no-create-home django
+RUN groupadd --system django && useradd --system --gid django --create-home django
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
