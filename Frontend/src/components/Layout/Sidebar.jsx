@@ -60,14 +60,14 @@ export default function Sidebar() {
           </svg>
         </div>
         <div>
-          <p className="text-sm font-bold leading-none text-white">BreatheESG</p>
+          <p className="text-sm font-bold leading-none text-white">ESG</p>
           <p className="text-xs text-slate-400 mt-0.5">Carbon Accounting</p>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-        {NAV.filter(({ to }) => !(to === '/review' && user?.role === 'AUDITOR')).map(({ label, to, icon }) => (
+        {NAV.filter(({ to }) => !(['/review', '/upload'].includes(to) && user?.role === 'AUDITOR')).map(({ label, to, icon }) => (
           <NavLink
             key={to}
             to={to}

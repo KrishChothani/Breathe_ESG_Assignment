@@ -1,6 +1,7 @@
 # ── Secrets — NEVER commit these ──────────────────────────────────────────────
 .env
 *.env
+.env.*
 
 # ── SQLite — not used (we use Supabase PostgreSQL) ────────────────────────────
 *.sqlite3
