@@ -1,0 +1,65 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# ── Virtual environments ───────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Django ─────────────────────────────────────────────────────────────────────
+staticfiles/
+db.sqlite3
+*.sqlite3
+
+# ── Media uploads (mounted as a Docker volume) ─────────────────────────────────
+media/
+
+# ── Tests & coverage ───────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+pytest.ini
+
+# ── Git & IDE ──────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Docker ─────────────────────────────────────────────────────────────────────
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# ── OS artefacts ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ───────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Secrets — never bake into the image ────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── CI / scripts not needed at runtime ────────────────────────────────────────
+ec2-bootstrap.sh
+fix_leap_year.py
+update_seed.py
