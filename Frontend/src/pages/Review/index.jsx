@@ -134,8 +134,9 @@ export default function Review() {
     const { action, row } = confirm
     if (action === 'APPROVE') await dispatch(doApprove({ row_id: row.id }))
     if (action === 'REJECT') await dispatch(doReject({ row_id: row.id }))
+    if (action === 'LOCK') await dispatch(doLockBatch([row.id]))
     setConfirm(null)
-    dispatch(fetchRows({ type: tab })) // Refresh rows after action
+    dispatch(fetchRows({ type: tab, scope: scope || undefined })) // Refresh rows after action
   }
 
   const handleLockBatch = async () => {
@@ -253,8 +254,14 @@ export default function Review() {
                           >Audit</button>
                           {(row.status === ROW_STATUS.PENDING || row.status === ROW_STATUS.FLAGGED) && (
                             <>
-                              <button onClick={() => handleAction('APPROVE', row)} className="rounded px-2 py-1 text-xs font-medium bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-colors">✓</button>
-                              <button onClick={() => handleAction('REJECT', row)} className="rounded px-2 py-1 text-xs font-medium bg-rose-100 hover:bg-rose-200 text-rose-700 transition-colors">✗</button>
+                              <button onClick={() => handleAction('APPROVE', row)} className="rounded px-2 py-1 text-xs font-medium bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-colors" title="Approve">✓</button>
+                              <button onClick={() => handleAction('REJECT', row)} className="rounded px-2 py-1 text-xs font-medium bg-rose-100 hover:bg-rose-200 text-rose-700 transition-colors" title="Reject">✗</button>
+                            </>
+                          )}
+                          {row.status === ROW_STATUS.APPROVED && (
+                            <>
+                              <button onClick={() => handleAction('LOCK', row)} className="rounded px-2 py-1 text-xs font-medium bg-purple-100 hover:bg-purple-200 text-purple-700 transition-colors" title="Lock for Audit">🔒</button>
+                              <button onClick={() => handleAction('REJECT', row)} className="rounded px-2 py-1 text-xs font-medium bg-rose-100 hover:bg-rose-200 text-rose-700 transition-colors" title="Reject">✗</button>
                             </>
                           )}
                         </div>
@@ -280,9 +287,9 @@ export default function Review() {
       {detailRow && <RowDetailModal row={detailRow} tab={tab} onClose={() => dispatch(setDetailRow(null))} />}
       <ConfirmModal
         isOpen={!!confirm}
-        title={confirm?.action === 'APPROVE' ? 'Approve Row' : 'Reject Row'}
+        title={confirm?.action === 'APPROVE' ? 'Approve Row' : confirm?.action === 'REJECT' ? 'Reject Row' : 'Lock Row'}
         message={`Are you sure you want to ${confirm?.action?.toLowerCase()} this row? This action will be recorded in the audit trail.`}
-        confirmLabel={confirm?.action === 'APPROVE' ? 'Approve' : 'Reject'}
+        confirmLabel={confirm?.action === 'APPROVE' ? 'Approve' : confirm?.action === 'REJECT' ? 'Reject' : 'Lock'}
         danger={confirm?.action === 'REJECT'}
         onConfirm={confirmAction}
         onCancel={() => setConfirm(null)}

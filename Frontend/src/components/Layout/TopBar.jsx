@@ -5,7 +5,7 @@ import { clearOrganisation, setActiveOrganisation } from '../../store/organisati
 import { clearAuth } from '../../store/authSlice'
 
 const PAGE_TITLES = {
-  '/':              'Dashboard',
+  '/dashboard':      'Dashboard',
   '/upload':        'Upload Data',
   '/review':        'Review Queue',
   '/audit':         'Audit Ledger',

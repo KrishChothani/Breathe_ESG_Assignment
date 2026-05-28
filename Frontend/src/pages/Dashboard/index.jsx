@@ -188,12 +188,12 @@ export default function Dashboard() {
           <ReviewPipelineChart />
         </div>
       </div>
-
+      {/* ── Row 5: Predictive Forecast Panel ───────────────────────────────── */}
+      <ForecastPanel fy={currentFY()} />
       {/* ── Row 4: Ingestion activity (full width) ──────────────────────── */}
       <IngestionActivityChart />
 
-      {/* ── Row 5: Predictive Forecast Panel ───────────────────────────────── */}
-      <ForecastPanel fy={currentFY()} />
+      
 
       {/* ── Ingestion summary by source ─────────────────────────────────── */}
       {/* {stats?.sources && (

@@ -34,7 +34,7 @@ export default function Login() {
       // Single org — token is already stored by login()
       dispatch(setUser(data.user))
       dispatch(setActiveOrganisation({ organisation: data.organisation, role: data.role }))
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       const detail = err.response?.data?.detail ?? err.response?.data?.error
       setError(detail ?? 'Invalid credentials. Please try again.')
@@ -70,7 +70,7 @@ export default function Login() {
       const meData = await meRes.json()
       dispatch(setUser(meData))
       dispatch(setActiveOrganisation({ organisation: data.organisation, role: data.role }))
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       setError('Failed to select organisation. Please try again.')
     } finally {
