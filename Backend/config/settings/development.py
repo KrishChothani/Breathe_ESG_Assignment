@@ -24,8 +24,11 @@ ALLOWED_HOSTS = [
 # ── DATABASES comes from base.py (dj_database_url.config via DATABASE_URL) ───
 # Do NOT override DATABASES here — Supabase is used in all environments.
 
-# ── CORS — allow all in development for rapid iteration ──────────────────────
-CORS_ALLOW_ALL_ORIGINS = True
+# ── CORS — fully open in development ─────────────────────────────────────────
+CORS_ALLOW_ALL_ORIGINS  = True
+CORS_ALLOW_ALL_HEADERS  = True    # ← this is what was missing
+CORS_ALLOW_CREDENTIALS  = True
+CORS_ALLOW_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
 
 # ── Email — log to console during development ─────────────────────────────────
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
