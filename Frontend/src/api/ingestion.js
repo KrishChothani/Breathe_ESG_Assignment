@@ -1,10 +1,16 @@
 import client from './client'
 
+// ── Multipart config — lets browser set Content-Type + boundary automatically ─
+// IMPORTANT: Do NOT set Content-Type: multipart/form-data manually.
+// The browser must set it so the boundary token is included.
+const MULTIPART = { headers: { 'Content-Type': undefined } }
+
 export const uploadSAPFile = (file, onProgress) => {
   const fd = new FormData()
   fd.append('file', file)
   fd.append('source_type', 'SAP')
   return client.post('/ingestion/upload/', fd, {
+    ...MULTIPART,
     onUploadProgress: (e) => onProgress && onProgress(Math.round((e.loaded * 100) / e.total)),
   })
 }
@@ -14,6 +20,7 @@ export const uploadUtilityCSV = (file, onProgress) => {
   fd.append('file', file)
   fd.append('source_type', 'UTILITY')
   return client.post('/ingestion/upload/', fd, {
+    ...MULTIPART,
     onUploadProgress: (e) => onProgress && onProgress(Math.round((e.loaded * 100) / e.total)),
   })
 }
@@ -23,7 +30,7 @@ export const pullTravelData = (credentials) =>
 
 export const getUploads = (params) => client.get('/ingestion/upload/', { params })
 
-// ── AI Bill OCR ───────────────────────────────────────────────────────────────────
+// ── AI Bill OCR ───────────────────────────────────────────────────────────────
 
 /**
  * Upload a bill image/PDF for AI extraction.
@@ -32,7 +39,8 @@ export const getUploads = (params) => client.get('/ingestion/upload/', { params 
 export const extractBill = (file) => {
   const fd = new FormData()
   fd.append('file', file)
-  return client.post('/ingestion/utility/ocr-extract/', fd)
+  // Must use MULTIPART config — Content-Type: application/json causes 415
+  return client.post('/ingestion/utility/ocr-extract/', fd, MULTIPART)
 }
 
 /**
