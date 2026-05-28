@@ -99,3 +99,13 @@ jobs:
               -e GUNICORN_THREADS=2 \
               ${{ secrets.DOCKER_USERNAME }}/breatheesg-backend:latest
 
+            # Wait for DB connections and container startup
+            sleep 5
+
+            # Run schema migrations
+            sudo docker exec breatheesg-backend python manage.py migrate --noinput
+            
+            # Load global lookup data (idempotent, safe to run on every deploy)
+            sudo docker exec breatheesg-backend python manage.py load_airports /app/data/airports.csv
+            sudo docker exec breatheesg-backend python manage.py load_emission_factors
+

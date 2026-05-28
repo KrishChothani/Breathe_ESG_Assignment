@@ -62,6 +62,9 @@ RUN pip install --no-cache-dir --no-index --find-links=/wheels/dist \
 # Copy application source
 COPY . .
 
+# Copy the lookup datasets
+COPY data/ /app/data/
+
 # Collect static files (requires a dummy SECRET_KEY so Django doesn't error)
 RUN DJANGO_SECRET_KEY=collectstatic-dummy \
     DATABASE_URL=sqlite:///tmp/dummy.db \
