@@ -164,10 +164,9 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024   # 20 MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024   # 20 MB
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:3000',
-]
+CORS_ALLOW_ALL_ORIGINS = True          # Allow every origin (*)
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_HEADERS = True          # Allow all request headers
+CORS_ALLOW_METHODS = [                 # Allow all standard HTTP methods
+    'DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT',
+]

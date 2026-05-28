@@ -12,7 +12,14 @@ from .base import *  # noqa: F401, F403
 DEBUG = True
 
 # ── Hosts ─────────────────────────────────────────────────────────────────────
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = [
+    'localhost', '127.0.0.1', '0.0.0.0',
+    # Allow any ngrok tunnel (subdomain changes each restart)
+    '.ngrok-free.app',
+    '.ngrok.io',
+    # Vercel frontend (for preview URLs)
+    '.vercel.app',
+]
 
 # ── DATABASES comes from base.py (dj_database_url.config via DATABASE_URL) ───
 # Do NOT override DATABASES here — Supabase is used in all environments.

@@ -1,11 +1,12 @@
 import axios from 'axios'
 import { TOKEN_KEY, REFRESH_KEY } from '../utils/constants'
 
-// Single source of truth — set VITE_API_BASE_URL in Frontend/.env
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+// In production (Vercel), VITE_API_BASE_URL is set to the backend URL.
+// In local dev, it falls back to '/api/v1' which Vite proxies to localhost:8000.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
 const client = axios.create({
-  baseURL: API_BASE,
+  baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 })
 
