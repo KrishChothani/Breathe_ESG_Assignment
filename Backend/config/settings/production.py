@@ -13,18 +13,22 @@ DEBUG = False
 
 SECRET_KEY = os.environ['DJANGO_SECRET_KEY']  # Hard fail if not set
 
-# ── ALLOWED_HOSTS: supports '*' wildcard or comma-separated list ──────────────
-_raw_hosts = os.environ.get('ALLOWED_HOSTS', 'localhost')
-if _raw_hosts.strip() == '*':
-    ALLOWED_HOSTS = ['*']
-else:
-    ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',') if h.strip()]
-
-# ── CORS: always open in this deployment (restrict once backend has fixed URL) ─
-CORS_ALLOW_ALL_ORIGINS  = True
-CORS_ALLOW_CREDENTIALS  = True
-CORS_ALLOW_ALL_HEADERS  = True
-CORS_ALLOW_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
+# ── ALLOWED_HOSTS — hard-coded to include all deployment targets ──────────────
+ALLOWED_HOSTS = [
+    # Local
+    'localhost', '127.0.0.1', '0.0.0.0',
+    # EC2 public IP — update if your EC2 IP changes
+    '13.233.233.129',
+    # ngrok tunnels — wildcard subdomains
+    '.ngrok-free.app',
+    '.ngrok.io',
+    # Vercel frontend + preview URLs
+    'cks-breatheesg.vercel.app',
+    'breatheesg.vercel.app',
+    '.vercel.app',
+    # If ALLOWED_HOSTS env var set to '*', honour it
+    *([os.environ.get('ALLOWED_HOSTS', '')] if os.environ.get('ALLOWED_HOSTS', '').strip() == '*' else []),
+]
 
 # ── DATABASES comes from base.py (dj_database_url.config via DATABASE_URL) ───
 # Do NOT override DATABASES here.

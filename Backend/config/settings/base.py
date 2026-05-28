@@ -163,10 +163,41 @@ SIMPLE_JWT = {
 FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024   # 20 MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024   # 20 MB
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
-CORS_ALLOW_ALL_ORIGINS = True          # Allow every origin (*)
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_HEADERS = True          # Allow all request headers
-CORS_ALLOW_METHODS = [                 # Allow all standard HTTP methods
+# ── CORS — hard-coded open (update when moving to dedicated server) ───────────
+CORS_ALLOW_ALL_ORIGINS   = True     # Accept requests from ANY origin (*)
+CORS_ALLOW_CREDENTIALS   = True
+CORS_ALLOW_ALL_HEADERS   = True     # Accept ALL request headers
+
+# Explicit list as backup — ensures ngrok-skip-browser-warning is always allowed
+CORS_ALLOW_HEADERS = list([
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'ngrok-skip-browser-warning',   # ← required for ngrok tunnels
+    'cache-control',
+    'pragma',
+])
+
+CORS_ALLOW_METHODS = [
     'DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT',
+]
+
+# Hard-coded trusted origins (belt-and-suspenders alongside CORS_ALLOW_ALL_ORIGINS)
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:3000',
+    'https://cks-breatheesg.vercel.app',    # ← production frontend
+    'https://breatheesg.vercel.app',
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://[a-z0-9-]+\.ngrok-free\.app$',   # any ngrok-free URL
+    r'^https://[a-z0-9-]+\.ngrok\.io$',
+    r'^https://[a-zA-Z0-9-]+\.vercel\.app$',    # any vercel preview URL
 ]
