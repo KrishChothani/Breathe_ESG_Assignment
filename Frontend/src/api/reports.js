@@ -7,3 +7,16 @@ export const getBRSRSummary = (fy) =>
 /** GET /api/v1/ingestion/emission-factors/ */
 export const getEmissionFactors = (params) =>
   client.get('/ingestion/emission-factors/', { params })
+
+/**
+ * GET /api/v1/reports/emissions-forecast/
+ * @param {string} fy
+ * @param {object} drivers
+ */
+export const getEmissionsForecast = (fy, drivers = {}) => {
+  const params = { fy }
+  if (drivers.air_travel    !== undefined) params.driver_air    = drivers.air_travel
+  if (drivers.hotel_stays   !== undefined) params.driver_hotel  = drivers.hotel_stays
+  if (drivers.ground_transport !== undefined) params.driver_ground = drivers.ground_transport
+  return client.get('/reports/emissions-forecast/', { params })
+}

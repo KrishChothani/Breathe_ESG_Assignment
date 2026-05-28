@@ -238,7 +238,7 @@ class Command(BaseCommand):
                     ghg_category      = ghg_cat,
                     emission_factor_value  = ef_val,
                     emission_factor_unit   = ef_unit_str,
-                    emission_factor_source = 'IPCC_2006',
+                    emission_factor_source = 'IPCC_AR6',
                     emission_factor_year   = 2020,
                     emission_factor_record_id = ef_rec.id if ef_rec else None,
                     formula           = formula,
@@ -363,9 +363,9 @@ class Command(BaseCommand):
                 ('HOTEL', 'London Marriott', fy_date(6, 10), 'APPROVED', None, None, None, None, None, 5, 2),
                 ('HOTEL', 'Hyderabad Novotel', fy_date(7, 4), 'APPROVED', None, None, None, None, None, 1, 1),
                 # GROUND rows
-                ('GROUND', 'Mumbai Airport Transfer', fy_date(4, 8),   'APPROVED', 35,   None, None, None, None, None, None),
-                ('GROUND', 'Delhi Office to Airport', fy_date(6, 10),  'APPROVED', 28,   None, None, None, None, None, None),
-                ('GROUND', 'BLR Corp Office Transfer', fy_date(7, 4),  'APPROVED', 22,   None, None, None, None, None, None),
+                ('GROUND_TRANSPORT', 'Mumbai Airport Transfer', fy_date(4, 8),   'APPROVED', 35,   None, None, None, None, None, None),
+                ('GROUND_TRANSPORT', 'Delhi Office to Airport', fy_date(6, 10),  'APPROVED', 28,   None, None, None, None, None, None),
+                ('GROUND_TRANSPORT', 'BLR Corp Office Transfer', fy_date(7, 4),  'APPROVED', 22,   None, None, None, None, None, None),
                 # PENDING / FLAGGED
                 ('AIR', 'BOM-DEL', fy_date(10, 15), 'PENDING',  1150, 'short', 1, 'BOM', 'DEL', None, None),
                 ('HOTEL', 'Chennai ITC', fy_date(11, 5), 'FLAGGED', None, None, None, None, None, 3, 1),
@@ -416,7 +416,7 @@ class Command(BaseCommand):
                         'emission_factor_record_id': ef_hotel.id if ef_hotel else None,
                     }
 
-                elif seg_type == 'GROUND' and row_status == 'APPROVED':
+                elif seg_type == 'GROUND_TRANSPORT' and row_status == 'APPROVED':
                     co2_kg, formula = road_co2(dist)
                     seg_kwargs = {
                         'ground_sub_type': 'TAXI',
@@ -463,8 +463,139 @@ class Command(BaseCommand):
 
             self.stdout.write(self.style.SUCCESS("  Travel rows created."))
 
+            # ── 6b. FY 2024-25 Historical Rows (for YoY comparison) ──────────
+            self.stdout.write("  Creating FY 2024-25 historical rows for YoY comparison...")
+
+            def prev_fy_date(month, day):
+                """Produce a date in FY 2024-25 (Apr 2024 - Mar 2025)."""
+                if month >= 4:
+                    return date(2024, month, day)
+                return date(2025, month, day)
+
+            ru_sap_prev = RawUpload.objects.create(
+                organisation=org, source_type='SAP',
+                original_filename='SAP_ME2M_FY2425_Historical.csv',
+                status='DONE', row_count=4, uploaded_by=analyst_user,
+            )
+            ru_util_prev = RawUpload.objects.create(
+                organisation=org, source_type='UTILITY',
+                original_filename='Utility_Bills_FY2425_Historical.csv',
+                status='DONE', row_count=5, uploaded_by=analyst_user,
+            )
+            ru_travel_prev = RawUpload.objects.create(
+                organisation=org, source_type='TRAVEL',
+                original_filename='Navan_TravelExport_FY2425_Historical.csv',
+                status='DONE', row_count=3, uploaded_by=analyst_user,
+            )
+
+            # Scope 1 — 4 SAP rows FY 2024-25 (slightly lower than FY 2025-26)
+            PREV_SAP = [
+                ('4500000901', 'MAT-DIESEL-001', 'High-Speed Diesel (HSD)', 'PL01', 'diesel', 4200, 'litres', prev_fy_date(5, 10)),
+                ('4500000902', 'MAT-DIESEL-001', 'High-Speed Diesel (HSD)', 'PL02', 'diesel', 3500, 'litres', prev_fy_date(7, 15)),
+                ('4500000903', 'MAT-PETROL-001', 'Motor Spirit / Petrol',   'PL01', 'petrol', 1900, 'litres', prev_fy_date(9, 20)),
+                ('4500000904', 'MAT-CNG-001',    'Compressed Natural Gas',  'PL02', 'cng',    900,  'kg',     prev_fy_date(11, 5)),
+            ]
+            for po, mat, desc, plant, fuel, qty, unit, doc_date in PREV_SAP:
+                co2_kg, formula = co2_func[fuel](qty)
+                SAPRow.objects.create(
+                    organisation=org, raw_upload=ru_sap_prev, status='APPROVED',
+                    po_number=po, line_item='10', material_code=mat,
+                    material_description=desc, plant_code=plant,
+                    plant_name=plant_names[plant],
+                    quantity=Decimal(str(qty)), unit_original=unit, unit_normalised=unit,
+                    net_value=Decimal(str(qty * 70)), currency='INR',
+                    document_date=doc_date,
+                    esg_category=esg_cat_map[fuel],
+                    co2e_kg=Decimal(str(co2_kg)),
+                    ghg_scope='SCOPE_1', ghg_category=esg_cat_map[fuel],
+                    emission_factor_value=(FACTOR_DIESEL if fuel == 'diesel' else FACTOR_PETROL if fuel == 'petrol' else FACTOR_CNG),
+                    emission_factor_unit=('kg CO2e / litre' if fuel != 'cng' else 'kg CO2e / kg'),
+                    emission_factor_source='IPCC_AR6',
+                    emission_factor_year=2020,
+                    emission_factor_record_id=ef_map[fuel].id if ef_map[fuel] else None,
+                    formula=formula,
+                )
+
+            # Scope 2 — 5 Utility rows FY 2024-25
+            PREV_UTIL = [
+                ('ACC-001-CHN', 'MTR-CHN-001', 'Chennai Manufacturing Unit', prev_fy_date(4,  1), prev_fy_date(4, 30), 42000),
+                ('ACC-002-PUN', 'MTR-PUN-002', 'Pune Assembly Plant',         prev_fy_date(5,  1), prev_fy_date(5, 31), 29500),
+                ('ACC-003-MUM', 'MTR-MUM-003', 'Mumbai Logistics Hub',        prev_fy_date(6,  1), prev_fy_date(6, 30), 19800),
+                ('ACC-004-BLR', 'MTR-BLR-004', 'Bengaluru Tech Office',       prev_fy_date(8,  1), prev_fy_date(8, 31), 14200),
+                ('ACC-001-CHN', 'MTR-CHN-001', 'Chennai Manufacturing Unit', prev_fy_date(10, 1), prev_fy_date(10, 31), 45500),
+            ]
+            for acc, mtr, site, b_start, b_end, kwh in PREV_UTIL:
+                co2_kg, formula = elec_co2(kwh)
+                period_month = f"{b_start.year}-{b_start.month:02d}"
+                UtilityRow.objects.create(
+                    organisation=org, raw_upload=ru_util_prev, status='APPROVED',
+                    account_number=acc, meter_id=mtr, site_name=site,
+                    billing_start=b_start, billing_end=b_end, period_month=period_month,
+                    consumption_original=Decimal(str(kwh)), unit_original='kWh',
+                    consumption_kwh=Decimal(str(kwh)),
+                    grid_factor_used=Decimal(str(FACTOR_ELEC_INDIA)),
+                    grid_factor_vintage_year=2024,
+                    co2e_kg=Decimal(str(co2_kg)),
+                    ghg_scope='SCOPE_2', ghg_category='Purchased Electricity',
+                    emission_factor_value=FACTOR_ELEC_INDIA,
+                    emission_factor_unit='kg CO2e / kWh',
+                    emission_factor_source='CEA_V20',
+                    emission_factor_year=2024,
+                    emission_factor_record_id=ef_elec.id if ef_elec else None,
+                    formula=formula,
+                    co2_comparison_status='NOT_APPLICABLE',
+                )
+
+            # Scope 3 — 3 Travel rows FY 2024-25
+            prev_travel_items = [
+                ('AIR',   'BOM-DEL',    prev_fy_date(5, 12), 1150, 'short', 1, 'BOM', 'DEL', None, None),
+                ('AIR',   'DEL-LHR',    prev_fy_date(8, 20), 6700, 'long',  1, 'DEL', 'LHR', None, None),
+                ('HOTEL', 'Mumbai Taj', prev_fy_date(5, 12), None, None,    None, None, None, 2, 1),
+            ]
+            for seg_type, desc, t_date, dist, haul, pax, dep, arr, nights, rooms in prev_travel_items:
+                if seg_type == 'AIR':
+                    co2_kg, formula = flight_co2(dist, pax, haul)
+                    ef_rec_t = {'short': ef_air_s, 'med': ef_air_m, 'long': ef_air_l}[haul]
+                    ef_val_t = {'short': FACTOR_FLIGHT_SHORT, 'med': FACTOR_FLIGHT_MED, 'long': FACTOR_FLIGHT_LONG}[haul]
+                    TravelRow.objects.create(
+                        organisation=org, raw_upload=ru_travel_prev, status='APPROVED',
+                        segment_type='AIR', travel_date=t_date, trip_name=desc,
+                        traveller_email=analyst_user.email, booking_source='NAVAN',
+                        departure_airport_code=dep, arrival_airport_code=arr,
+                        cabin_class='ECONOMY', rfi_applied=True,
+                        number_of_passengers=pax, distance_km=Decimal(str(dist)),
+                        distance_source='HAVERSINE',
+                        co2e_kg=Decimal(str(co2_kg)), formula=formula,
+                        ghg_scope='SCOPE_3',
+                        ghg_category=f'Business Travel - Air ({haul} haul)',
+                        emission_factor_value=ef_val_t,
+                        emission_factor_unit='kg CO2e / passenger / km',
+                        emission_factor_source='DEFRA_2024',
+                        emission_factor_year=2024,
+                        emission_factor_record_id=ef_rec_t.id if ef_rec_t else None,
+                    )
+                elif seg_type == 'HOTEL':
+                    co2_kg, formula = hotel_co2(nights or 1, rooms or 1)
+                    TravelRow.objects.create(
+                        organisation=org, raw_upload=ru_travel_prev, status='APPROVED',
+                        segment_type='HOTEL', travel_date=t_date, trip_name=desc,
+                        traveller_email=analyst_user.email, booking_source='NAVAN',
+                        hotel_name=desc, number_of_nights=nights or 1, number_of_rooms=rooms or 1,
+                        check_in_date=t_date, check_out_date=t_date + timedelta(days=nights or 1),
+                        co2e_kg=Decimal(str(co2_kg)), formula=formula,
+                        ghg_scope='SCOPE_3', ghg_category='Business Travel - Hotel Stay',
+                        emission_factor_value=FACTOR_HOTEL,
+                        emission_factor_unit='kg CO2e / room / night',
+                        emission_factor_source='DEFRA_2024',
+                        emission_factor_year=2024,
+                        emission_factor_record_id=ef_hotel.id if ef_hotel else None,
+                    )
+
+            self.stdout.write(self.style.SUCCESS("  FY 2024-25 historical rows created."))
+
             # ── 7. Plant Lookup (WERKS codes) ────────────────────────────────
             self.stdout.write("  Creating plant lookup codes...")
+
             from apps.emissions.models import PlantLookup
 
             PlantLookup.objects.filter(organisation=org).delete()

@@ -12,6 +12,7 @@ import ScopeDonutChart        from '../../components/Charts/ScopeDonutChart'
 import EmissionsBySourceChart from '../../components/Charts/EmissionsBySourceChart'
 import EmissionsByPlantChart  from '../../components/Charts/EmissionsByPlantChart'
 import IngestionActivityChart from '../../components/Charts/IngestionActivityChart'
+import ForecastPanel        from '../../components/Forecast/ForecastPanel'
 import ReviewPipelineChart    from '../../components/Charts/ReviewPipelineChart'
 import TimeRangeSelector      from '../../components/Charts/TimeRangeSelector'
 import { useDashboardStore }  from '../../store/dashboardStore'
@@ -86,6 +87,15 @@ function SourceCard({ source, label, total, parsed, failed, flagged }) {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 
 const GLOBAL_RANGE_OPTIONS = ['30d', '90d', '6m', '1y', 'all']
+
+function currentFY() {
+  const today = new Date()
+  const month = today.getMonth() + 1 // 1-indexed
+  const year  = today.getFullYear()
+  const fyStart = month >= 4 ? year : year - 1
+  const fyEnd   = String(fyStart + 1).slice(-2)
+  return `${fyStart}-${fyEnd}`
+}
 
 export default function Dashboard() {
   const { stats, loadingStats, globalRange, setGlobalRange, fetchDashboardData } = useDashboardStore()
@@ -181,6 +191,9 @@ export default function Dashboard() {
 
       {/* ── Row 4: Ingestion activity (full width) ──────────────────────── */}
       <IngestionActivityChart />
+
+      {/* ── Row 5: Predictive Forecast Panel ───────────────────────────────── */}
+      <ForecastPanel fy={currentFY()} />
 
       {/* ── Ingestion summary by source ─────────────────────────────────── */}
       {/* {stats?.sources && (
