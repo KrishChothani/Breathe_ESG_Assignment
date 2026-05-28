@@ -64,6 +64,11 @@ class NormalisedRow(TenantModel):
     emission_factor_unit   = models.CharField(max_length=100, null=True, blank=True)
     emission_factor_source = models.CharField(max_length=50, choices=EmissionFactorSource.choices, null=True, blank=True)
     emission_factor_year   = models.IntegerField(null=True, blank=True)
+    # Registry FK — records exactly which EmissionFactor record was used (for audit trail)
+    emission_factor_record_id = models.UUIDField(null=True, blank=True,
+        help_text='UUID of the EmissionFactor registry record used for this calculation')
+    # Human-readable formula string: e.g. '4280 kWh x 0.710 kg CO2e/kWh = 3038.8 kg'
+    formula = models.TextField(null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -90,6 +95,17 @@ class SAPRow(NormalisedRow):
     currency             = models.CharField(max_length=5, blank=True)
     document_date        = models.DateField(null=True, blank=True)
     esg_category         = models.CharField(max_length=100, blank=True)
+    # Document vs System CO2 comparison (SAP docs sometimes state CO2 claims)
+    document_claimed_co2_kg  = models.FloatField(null=True, blank=True)
+    system_calculated_co2_kg = models.FloatField(null=True, blank=True)
+    co2_variance_pct         = models.FloatField(null=True, blank=True)
+    co2_comparison_status    = models.CharField(max_length=30, null=True, blank=True, choices=[
+        ('NOT_APPLICABLE',    'Not Applicable'),
+        ('MATCH',             'Match — variance < 5%'),
+        ('MINOR_VARIANCE',    'Minor Variance — 5% to 15%'),
+        ('MAJOR_VARIANCE',    'Major Variance — > 15%'),
+        ('MISSING_DOC_VALUE', 'Missing Document Value'),
+    ])
 
     class Meta:
         verbose_name        = 'SAP Row'
@@ -120,6 +136,20 @@ class UtilityRow(NormalisedRow):
     consumption_kwh      = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True)
     grid_factor_used     = models.DecimalField(max_digits=12, decimal_places=6, null=True, blank=True)
     grid_factor_vintage_year = models.SmallIntegerField(null=True, blank=True)
+    # Document vs System CO2 comparison
+    document_claimed_co2_kg  = models.FloatField(null=True, blank=True,
+        help_text='CO2 figure extracted directly from the utility bill document')
+    system_calculated_co2_kg = models.FloatField(null=True, blank=True,
+        help_text='CO2 computed by the BreatheESG calculation engine')
+    co2_variance_pct         = models.FloatField(null=True, blank=True,
+        help_text='abs((doc - system) / system) x 100')
+    co2_comparison_status    = models.CharField(max_length=30, null=True, blank=True, choices=[
+        ('NOT_APPLICABLE',    'Not Applicable — no document CO2 claim'),
+        ('MATCH',             'Match — variance < 5%'),
+        ('MINOR_VARIANCE',    'Minor Variance — 5% to 15%'),
+        ('MAJOR_VARIANCE',    'Major Variance — > 15%'),
+        ('MISSING_DOC_VALUE', 'Missing Document Value'),
+    ])
 
     class Meta:
         verbose_name        = 'Utility Row'

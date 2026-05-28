@@ -441,3 +441,103 @@ class ProvenanceExportView(APIView):
             headers={"Content-Disposition": 'attachment; filename="provenance_export.csv"'},
         )
 
+
+# ── Emission Factor Registry ───────────────────────────────────────────────────
+
+class EmissionFactorListView(APIView):
+    """
+    GET  /api/v1/ingestion/emission-factors/ — list all factors (all authenticated users)
+    POST /api/v1/ingestion/emission-factors/ — add new factor version (Admin only)
+         When a new factor is created, the previous active version for the same
+         scope + activity_type is automatically marked is_active=False.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .models import EmissionFactor
+        qs = EmissionFactor.objects.all()
+
+        # Optional filters
+        scope = request.query_params.get('scope')
+        activity = request.query_params.get('activity')
+        active_only = request.query_params.get('active_only', 'false').lower() == 'true'
+
+        if scope:
+            qs = qs.filter(scope=scope)
+        if activity:
+            qs = qs.filter(fuel_or_activity_type__icontains=activity)
+        if active_only:
+            qs = qs.filter(is_active=True)
+
+        data = []
+        for ef in qs:
+            data.append({
+                'id':                    str(ef.id),
+                'scope':                 ef.scope,
+                'fuel_or_activity_type': ef.fuel_or_activity_type,
+                'factor_value':          ef.factor_value,
+                'factor_unit':           ef.factor_unit,
+                'source_name':           ef.source_name,
+                'source_version':        ef.source_version,
+                'valid_from_fy':         ef.valid_from_fy,
+                'valid_to_fy':           ef.valid_to_fy,
+                'country_code':          ef.country_code,
+                'is_active':             ef.is_active,
+                'notes':                 ef.notes,
+                'created_at':            ef.created_at.isoformat(),
+            })
+        return Response({'results': data, 'count': len(data)})
+
+    def post(self, request):
+        from .models import EmissionFactor
+        from apps.organisations.models import OrganisationMembership
+        from core.tenant import get_active_organisation
+
+        org = get_active_organisation(request)
+        if org:
+            try:
+                m = OrganisationMembership.objects.get(user=request.user, organisation=org)
+                if m.role != 'ADMIN':
+                    return Response({'error': 'Only Admins can add emission factors.'}, status=403)
+            except OrganisationMembership.DoesNotExist:
+                return Response({'error': 'Not a member of this organisation.'}, status=403)
+
+        d = request.data
+        required = ['scope', 'fuel_or_activity_type', 'factor_value',
+                    'factor_unit', 'source_name', 'valid_from_fy']
+        missing = [f for f in required if not d.get(f)]
+        if missing:
+            return Response({'error': f"Missing fields: {missing}"}, status=400)
+
+        # Deactivate previous active version
+        EmissionFactor.objects.filter(
+            scope=d['scope'],
+            fuel_or_activity_type=d['fuel_or_activity_type'],
+            country_code=d.get('country_code', 'IN'),
+            is_active=True,
+        ).update(is_active=False)
+
+        ef = EmissionFactor.objects.create(
+            scope=d['scope'],
+            fuel_or_activity_type=d['fuel_or_activity_type'],
+            factor_value=float(d['factor_value']),
+            factor_unit=d['factor_unit'],
+            source_name=d['source_name'],
+            source_version=d.get('source_version', ''),
+            valid_from_fy=d['valid_from_fy'],
+            valid_to_fy=d.get('valid_to_fy'),
+            country_code=d.get('country_code', 'IN'),
+            notes=d.get('notes', ''),
+            is_active=True,
+        )
+        return Response({
+            'id':                    str(ef.id),
+            'scope':                 ef.scope,
+            'fuel_or_activity_type': ef.fuel_or_activity_type,
+            'factor_value':          ef.factor_value,
+            'factor_unit':           ef.factor_unit,
+            'source_name':           ef.source_name,
+            'valid_from_fy':         ef.valid_from_fy,
+            'is_active':             ef.is_active,
+            'message':               'Factor created and previous version deactivated.',
+        }, status=201)

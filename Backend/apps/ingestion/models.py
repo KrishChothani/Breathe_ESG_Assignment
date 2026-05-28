@@ -160,3 +160,60 @@ class RowComment(models.Model):
 
     class Meta:
         ordering = ['created_at']
+
+
+# ── Emission Factor Registry ──────────────────────────────────────────────────
+
+class EmissionFactor(models.Model):
+    """
+    Single source of truth for all GHG emission factors.
+    Covers Scope 1 (fuel), Scope 2 (electricity), Scope 3 (travel).
+    Compliant with: GHG Protocol, IPCC AR6, CEA V20, DEFRA 2024, SEBI BRSR.
+    """
+
+    class Scope(models.TextChoices):
+        SCOPE_1 = 'SCOPE_1', 'Scope 1 — Direct'
+        SCOPE_2 = 'SCOPE_2', 'Scope 2 — Electricity'
+        SCOPE_3 = 'SCOPE_3', 'Scope 3 — Value Chain'
+
+    class Source(models.TextChoices):
+        CEA_V20          = 'CEA_V20',          'CEA CO2 Baseline Database V20.0'
+        IPCC_2006        = 'IPCC_2006',        'IPCC 2006 Guidelines'
+        IPCC_AR6         = 'IPCC_AR6',         'IPCC AR6 (2021)'
+        DEFRA_2024       = 'DEFRA_2024',       'DEFRA / DESNZ 2024'
+        ICAO_2023        = 'ICAO_2023',        'ICAO Carbon Emissions Calculator 2023'
+        INDIA_GHG        = 'INDIA_GHG',        'India GHG Program'
+        GHG_PROTOCOL     = 'GHG_PROTOCOL',     'GHG Protocol Cross-Sector Tools'
+
+    id                   = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    scope                = models.CharField(max_length=20,  choices=Scope.choices, db_index=True)
+    fuel_or_activity_type = models.CharField(max_length=100, db_index=True,
+        help_text="e.g. diesel, electricity_india, flight_short_haul, hotel_night")
+    factor_value         = models.FloatField()
+    factor_unit          = models.CharField(max_length=100,
+        help_text="e.g. 'kg CO2e / litre' or 'kg CO2e / kWh'")
+    source_name          = models.CharField(max_length=30, choices=Source.choices)
+    source_version       = models.CharField(max_length=150, blank=True)
+    valid_from_fy        = models.CharField(max_length=10,
+        help_text="India FY e.g. '2024-25'")
+    valid_to_fy          = models.CharField(max_length=10, null=True, blank=True,
+        help_text="null = still current")
+    country_code         = models.CharField(max_length=5, default='IN')
+    notes                = models.TextField(null=True, blank=True)
+    is_active            = models.BooleanField(default=True, db_index=True)
+    created_at           = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Emission Factor'
+        verbose_name_plural = 'Emission Factors'
+        ordering            = ['-valid_from_fy', 'scope', 'fuel_or_activity_type']
+        unique_together     = [('scope', 'fuel_or_activity_type', 'valid_from_fy', 'country_code')]
+        indexes = [
+            models.Index(fields=['scope', 'fuel_or_activity_type', 'is_active']),
+        ]
+
+    def __str__(self):
+        return (f"[{self.scope}] {self.fuel_or_activity_type} "
+                f"= {self.factor_value} {self.factor_unit} "
+                f"({self.source_name}, FY {self.valid_from_fy})")
+

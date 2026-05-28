@@ -10,6 +10,8 @@ import Review from './pages/Review/index'
 import Audit from './pages/Audit/index'
 import PlantLookup from './pages/PlantLookup/index'
 import Organisation from './pages/Organisation/index'
+import BRSRReport from './pages/BRSRReport/index'
+import EmissionFactors from './pages/EmissionFactors/index'
 
 export default function App() {
   return (
@@ -19,12 +21,14 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
-              <Route path="/"              element={<Dashboard />} />
-              <Route path="/upload"        element={<Upload />} />
-              <Route path="/review"        element={<Review />} />
-              <Route path="/audit"         element={<Audit />} />
-              <Route path="/plant-lookup"  element={<PlantLookup />} />
-              <Route path="/organisation"  element={<Organisation />} />
+              <Route path="/"                  element={<Dashboard />} />
+              <Route path="/upload"            element={<Upload />} />
+              <Route path="/review"            element={<Review />} />
+              <Route path="/audit"             element={<Audit />} />
+              <Route path="/plant-lookup"      element={<PlantLookup />} />
+              <Route path="/organisation"      element={<Organisation />} />
+              <Route path="/brsr-report"       element={<BRSRReport />} />
+              <Route path="/emission-factors"  element={<EmissionFactors />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -33,4 +37,5 @@ export default function App() {
     </Provider>
   )
 }
+
 

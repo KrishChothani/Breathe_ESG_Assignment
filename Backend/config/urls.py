@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/v1/ingestion/',       include('apps.ingestion.urls')),
     path('api/v1/emissions/',       include('apps.emissions.urls')),
     path('api/v1/review/',          include('apps.review.urls')),
+    path('api/v1/reports/',         include('apps.reports.urls')),
 ]
 
 # Serve uploaded files in development

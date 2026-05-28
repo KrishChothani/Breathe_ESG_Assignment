@@ -9,6 +9,7 @@ from .views import (
     RowCommentListCreateView,
     RowCommentResolveView,
     ProvenanceExportView,
+    EmissionFactorListView,
 )
 
 urlpatterns = [
@@ -27,7 +28,10 @@ urlpatterns = [
     path('audit-logs/', AuditLogListView.as_view(), name='audit-logs'),
     path('rows/<str:source>/<str:row_id>/comments/', RowCommentListCreateView.as_view(), name='row-comments'),
     path('rows/comments/<uuid:pk>/resolve/', RowCommentResolveView.as_view(), name='resolve-comment'),
-    
+
     # Export
     path('export/provenance/', ProvenanceExportView.as_view(), name='export-provenance'),
+
+    # Emission Factor Registry (Admin: read/create; all authenticated: read)
+    path('emission-factors/', EmissionFactorListView.as_view(), name='emission-factors'),
 ]
