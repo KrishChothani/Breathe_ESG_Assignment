@@ -13,7 +13,18 @@ DEBUG = False
 
 SECRET_KEY = os.environ['DJANGO_SECRET_KEY']  # Hard fail if not set
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost').split(',')
+# ── ALLOWED_HOSTS: supports '*' wildcard or comma-separated list ──────────────
+_raw_hosts = os.environ.get('ALLOWED_HOSTS', 'localhost')
+if _raw_hosts.strip() == '*':
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',') if h.strip()]
+
+# ── CORS: always open in this deployment (restrict once backend has fixed URL) ─
+CORS_ALLOW_ALL_ORIGINS  = True
+CORS_ALLOW_CREDENTIALS  = True
+CORS_ALLOW_ALL_HEADERS  = True
+CORS_ALLOW_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
 
 # ── DATABASES comes from base.py (dj_database_url.config via DATABASE_URL) ───
 # Do NOT override DATABASES here.
@@ -24,11 +35,11 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ── Security Headers ──────────────────────────────────────────────────────────
 SECURE_SSL_REDIRECT = False
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SECURE_HSTS_SECONDS = 0          # Disabled — using ngrok/HTTP in this deployment
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+SESSION_COOKIE_SECURE = False    # Set True only when on real HTTPS with fixed domain
+CSRF_COOKIE_SECURE = False
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # ── Navan API ─────────────────────────────────────────────────────────────────
