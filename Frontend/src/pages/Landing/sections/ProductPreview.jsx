@@ -29,22 +29,22 @@ export default function ProductPreview() {
   }, [])
 
   return (
-    <section className="py-24 px-6 relative bg-slate-900">
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-blue-900/10 to-slate-900 pointer-events-none" />
+    <section className="py-24 px-6 relative bg-white">
+      <div className="absolute inset-0 bg-gradient-to-b from-white via-blue-50/30 to-white pointer-events-none" />
 
       <div className="max-w-6xl mx-auto relative z-10">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-semibold mb-5 uppercase tracking-wide">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 text-xs font-semibold mb-5 uppercase tracking-wide">
             Live Platform
           </div>
-          <h2 className="text-4xl sm:text-5xl font-black text-white mb-5 tracking-tight">
+          <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-5 tracking-tight">
             A dashboard built for
             <br />
-            <span className="text-blue-400">
+            <span className="text-blue-600">
               real ESG analysts
             </span>
           </h2>
-          <p className="text-lg text-slate-400 max-w-xl mx-auto">
+          <p className="text-lg text-slate-600 max-w-xl mx-auto">
             Not a spreadsheet. Not a BI tool bolted onto compliance forms.
             A purpose-built enterprise carbon accounting platform.
           </p>
@@ -59,14 +59,14 @@ export default function ProductPreview() {
                 onClick={() => setCurrent(idx)}
                 className={`text-left p-4 rounded-xl border-2 transition-all ${
                   current === idx
-                    ? 'border-blue-500 bg-slate-800 shadow-md shadow-blue-500/10'
-                    : 'border-transparent hover:bg-slate-800/50'
+                    ? 'border-blue-300 bg-blue-50 shadow-md shadow-blue-100'
+                    : 'border-transparent hover:bg-slate-50'
                 }`}
               >
-                <h3 className={`text-sm font-bold mb-1 ${current === idx ? 'text-blue-400' : 'text-slate-300'}`}>
+                <h3 className={`text-sm font-bold mb-1 ${current === idx ? 'text-blue-600' : 'text-slate-700'}`}>
                   {slide.title}
                 </h3>
-                <p className={`text-xs leading-relaxed ${current === idx ? 'text-blue-300' : 'text-slate-500'}`}>
+                <p className={`text-xs leading-relaxed ${current === idx ? 'text-blue-600/80' : 'text-slate-500'}`}>
                   {slide.desc}
                 </p>
               </button>
@@ -74,17 +74,17 @@ export default function ProductPreview() {
           </div>
 
           <div className="w-full lg:w-2/3">
-            <div className="relative rounded-2xl overflow-hidden border border-slate-700 shadow-2xl shadow-black/50 bg-slate-800 group aspect-[16/10] sm:aspect-video flex items-center justify-center">
+            <div className="relative rounded-2xl overflow-hidden border border-slate-200 shadow-2xl shadow-slate-200/50 bg-white group aspect-[16/10] sm:aspect-video flex items-center justify-center">
               
-              <div className="absolute top-0 inset-x-0 flex items-center gap-3 px-4 py-3 bg-[#0d1117] border-b border-white/[0.06] z-20">
+              <div className="absolute top-0 inset-x-0 flex items-center gap-3 px-4 py-3 bg-slate-50 border-b border-slate-200 z-20">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-rose-500/70" />
                   <div className="w-3 h-3 rounded-full bg-amber-500/70" />
                   <div className="w-3 h-3 rounded-full bg-emerald-500/70" />
                 </div>
                 <div className="flex-1 max-w-sm mx-auto">
-                  <div className="h-5 rounded-md bg-white/[0.05] border border-white/[0.05] flex items-center justify-center">
-                    <span className="text-[10px] text-slate-500 font-mono">app.breatheesg.com/dashboard</span>
+                  <div className="h-5 rounded-md bg-white border border-slate-200 shadow-sm flex items-center justify-center">
+                    <span className="text-[10px] text-slate-400 font-mono">app.breatheesg.com/dashboard</span>
                   </div>
                 </div>
               </div>

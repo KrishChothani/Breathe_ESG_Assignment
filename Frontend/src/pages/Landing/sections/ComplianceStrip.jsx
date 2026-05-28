@@ -1,5 +1,5 @@
 /**
- * ComplianceStrip.jsx — Regulatory frameworks compliance badges (Light Theme)
+ * ComplianceStrip.jsx — Regulatory frameworks compliance badges (Dark Theme)
  */
 const frameworks = [
   { short: 'SEBI BRSR', full: 'SEBI Circular 2023/122', color: 'emerald' },
@@ -12,31 +12,33 @@ const frameworks = [
 ]
 
 const colorMap = {
-  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-  blue:    'border-blue-200 bg-blue-50 text-blue-800',
-  indigo:  'border-indigo-200 bg-indigo-50 text-indigo-800',
-  violet:  'border-violet-200 bg-violet-50 text-violet-800',
-  amber:   'border-amber-200 bg-amber-50 text-amber-800',
-  rose:    'border-rose-200 bg-rose-50 text-rose-800',
-  teal:    'border-teal-200 bg-teal-50 text-teal-800',
+  emerald: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+  blue:    'border-blue-500/30 bg-blue-500/10 text-blue-300',
+  indigo:  'border-indigo-500/30 bg-indigo-500/10 text-indigo-300',
+  violet:  'border-violet-500/30 bg-violet-500/10 text-violet-300',
+  amber:   'border-amber-500/30 bg-amber-500/10 text-amber-300',
+  rose:    'border-rose-500/30 bg-rose-500/10 text-rose-300',
+  teal:    'border-teal-500/30 bg-teal-500/10 text-teal-300',
 }
 
 export default function ComplianceStrip() {
   return (
-    <section id="compliance" className="py-24 px-6 relative bg-white border-t border-slate-200">
-      <div className="max-w-7xl mx-auto">
+    <section id="compliance" className="py-24 px-6 relative bg-slate-900">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700 text-xs font-semibold mb-5 uppercase tracking-wide">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-400 text-xs font-semibold mb-5 uppercase tracking-wide">
             Regulatory Compliance
           </div>
-          <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-4 tracking-tight">
+          <h2 className="text-4xl sm:text-5xl font-black text-white mb-4 tracking-tight">
             Built on the frameworks
             <br />
-            <span className="text-blue-600">
+            <span className="text-blue-400">
               auditors actually use
             </span>
           </h2>
-          <p className="text-lg text-slate-600 max-w-xl mx-auto font-medium">
+          <p className="text-lg text-slate-400 max-w-xl mx-auto font-medium">
             Every emission factor, every GWP value, every grid intensity is traceable
             to a published regulatory source.
           </p>
@@ -47,7 +49,7 @@ export default function ComplianceStrip() {
           {frameworks.map((f) => (
             <div
               key={f.short}
-              className={`flex flex-col items-center px-5 py-3.5 rounded-xl border-2 ${colorMap[f.color]} transition-all hover:-translate-y-0.5 shadow-sm`}
+              className={`flex flex-col items-center px-5 py-3.5 rounded-xl border ${colorMap[f.color]} transition-all hover:-translate-y-0.5`}
             >
               <span className="text-sm font-bold">{f.short}</span>
               <span className="text-[10px] opacity-80 mt-0.5 font-medium">{f.full}</span>
@@ -76,11 +78,11 @@ export default function ComplianceStrip() {
           ].map((d) => (
             <div
               key={d.title}
-              className="p-6 rounded-2xl border border-slate-200 bg-white hover:border-blue-300 hover:shadow-md transition-all"
+              className="p-6 rounded-2xl border border-slate-700 bg-slate-800 hover:border-blue-500/50 transition-all"
             >
               <span className="text-3xl mb-3 block">{d.icon}</span>
-              <h3 className="text-sm font-bold text-slate-900 mb-2">{d.title}</h3>
-              <p className="text-xs text-slate-600 leading-relaxed font-medium">{d.desc}</p>
+              <h3 className="text-sm font-bold text-white mb-2">{d.title}</h3>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">{d.desc}</p>
             </div>
           ))}
         </div>

@@ -1,14 +1,4 @@
-/**
- * LandingPage.jsx — BreatheESG public-facing landing page
- *
- * Route: GET /
- * - Unauthenticated users: renders this marketing page
- * - Authenticated users: redirected to /dashboard by PublicRoute in App.jsx
- *
- * Section order:
- *   Navbar → Hero → TrustBar → Features → HowItWorks →
- *   ProductPreview → ComplianceStrip → Pricing → FinalCTA → Footer
- */
+
 import Navbar          from './sections/Navbar'
 import Hero            from './sections/Hero'
 import TrustBar        from './sections/TrustBar'
@@ -25,10 +15,10 @@ export default function LandingPage() {
       <Navbar />
       <main>
         <Hero />
-        <TrustBar />
+        {/* <TrustBar /> */}
+        <ProductPreview />
         <Features />
         <HowItWorks />
-        <ProductPreview />
         <ComplianceStrip />
         <FinalCTA />
       </main>
