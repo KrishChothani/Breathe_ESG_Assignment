@@ -12,9 +12,10 @@ import FailedRowsTable from './FailedRowsTable'
 import AuditLogDrawer from '../../components/Drawers/AuditLogDrawer'
 import api from '../../api/client'
 
+// Auto-scaling CO₂e cell — used by SAP & Utility (kg below 1000, t above)
 const Co2eCell = ({ row }) => (
   <td className="td text-right font-mono group/tooltip relative overflow-visible">
-    <span className="border-b border-dashed border-gray-400 cursor-help" title="Hover for details">{formatCO2e(row.co2e_kg)}</span>
+    <span className="border-b border-dashed border-gray-400 cursor-help">{formatCO2e(row.co2e_kg)}</span>
     {row.emission_factor_source && (
       <div className="absolute hidden group-hover/tooltip:block bg-gray-800 text-white text-xs rounded p-2 z-50 bottom-full right-0 mb-1 w-48 shadow-lg text-left">
         <div className="font-semibold mb-1 border-b border-gray-600 pb-1">Factor Details</div>
@@ -27,6 +28,37 @@ const Co2eCell = ({ row }) => (
   </td>
 )
 
+// Always-in-tonnes CO₂e cell — used by Travel rows
+const TravelCo2eCell = ({ row }) => {
+  const kg = row.co2e_kg !== null && row.co2e_kg !== undefined ? parseFloat(row.co2e_kg) : null
+  const tonnes = kg !== null ? (kg / 1000).toFixed(4) : null
+  return (
+    <td className="td text-right font-mono group/tooltip relative overflow-visible">
+      <span
+        className="border-b border-dashed border-emerald-400 cursor-help"
+        title={kg !== null ? `${kg.toFixed(2)} kgCO₂e (raw)` : 'Not calculated'}
+      >
+        {tonnes !== null ? (
+          <span>
+            {tonnes} <span className="text-slate-400 font-normal text-[10px]">tCO₂e</span>
+          </span>
+        ) : '—'}
+      </span>
+      {row.emission_factor_source && (
+        <div className="absolute hidden group-hover/tooltip:block bg-gray-800 text-white text-xs rounded p-2 z-50 bottom-full right-0 mb-1 w-52 shadow-lg text-left">
+          <div className="font-semibold mb-1 border-b border-gray-600 pb-1">CO₂ Calculation</div>
+          <div>Raw: {kg !== null ? `${kg.toFixed(2)} kg` : '—'}</div>
+          <div>Tonnes: {tonnes !== null ? `${tonnes} t` : '—'}</div>
+          <div className="mt-1 border-t border-gray-600 pt-1">Source: {row.emission_factor_source}</div>
+          <div>Year: {row.emission_factor_year || 'N/A'}</div>
+          <div>Scope: {row.ghg_scope?.replace('_', ' ')}</div>
+          {row.formula && <div className="mt-1 text-gray-300 italic">{row.formula}</div>}
+        </div>
+      )}
+    </td>
+  )
+}
+
 const TABS = [
   { key: 'SAP', label: 'SAP Rows' },
   { key: 'UTILITY', label: 'Utility Rows' },
@@ -35,8 +67,8 @@ const TABS = [
 ]
 
 const SAP_COLS = ['Status', 'Plant', 'Material', 'Qty', 'Unit', 'Date', 'Category', 'CO₂e', '']
-const UTIL_COLS = ['Status', 'Meter', 'Site', 'Period', 'kWh', 'CO₂e', '']
-const TRAVEL_COLS = ['Status', 'Type', 'Origin', 'Destination', 'Class', 'Dist km', 'CO₂e', 'Traveller', '']
+const UTIL_COLS = ['Status', 'Meter', 'Site', 'Billing Start', 'Billing End', 'Period', 'kWh', 'CO₂e', '']
+const TRAVEL_COLS = ['Status', 'Type', 'Origin', 'Destination', 'Class', 'Dist km', 'CO₂e (tCO₂e)', 'Traveller', '']
 
 function SAPCols({ row }) {
   return (
@@ -56,6 +88,8 @@ function UtilCols({ row }) {
     <>
       <td className="td font-mono">{row.meter_id}</td>
       <td className="td">{row.site_name}</td>
+      <td className="td font-mono text-blue-700">{formatDate(row.billing_start)}</td>
+      <td className="td font-mono text-blue-700">{formatDate(row.billing_end)}</td>
       <td className="td font-mono">{row.period_month}</td>
       <td className="td text-right font-mono">{row.consumption_kwh ? parseFloat(row.consumption_kwh).toFixed(2) : '—'}</td>
       <Co2eCell row={row} />
@@ -70,7 +104,7 @@ function TravelCols({ row }) {
       <td className="td font-mono">{row.arrival_airport_code || row.arrival_station || row.hotel_name || '—'}</td>
       <td className="td">{row.cabin_class || row.car_category || row.rail_class || '—'}</td>
       <td className="td text-right font-mono">{row.distance_km ? parseFloat(row.distance_km).toFixed(0) : '—'}</td>
-      <Co2eCell row={row} />
+      <TravelCo2eCell row={row} />
       <td className="td text-xs text-slate-500 max-w-[160px] truncate" title={row.traveller_email}>{row.traveller_email}</td>
     </>
   )

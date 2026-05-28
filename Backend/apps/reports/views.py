@@ -100,6 +100,10 @@ class BRSRSummaryView(APIView):
 
         # ── Scope 3 — Travel rows ─────────────────────────────────────────────
         travel_qs = TravelRow.objects.filter(
+            Q(travel_date__range=(fy_start, fy_end)) |
+            Q(check_in_date__range=(fy_start, fy_end)) |
+            Q(car_pickup_datetime__range=(fy_start, fy_end)) |
+            Q(created_at__range=(fy_start, fy_end), travel_date__isnull=True, check_in_date__isnull=True, car_pickup_datetime__isnull=True),
             organisation=org,
         )
         scope3_approved = travel_qs.filter(status='APPROVED')

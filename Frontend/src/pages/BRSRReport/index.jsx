@@ -17,7 +17,16 @@ const CURRENT_FY = (() => {
   return `${y}-${String(y + 1).slice(2)}`
 })()
 
-const FY_OPTIONS = ['2024-25', '2023-24', '2022-23']
+const FY_OPTIONS = (() => {
+  const options = [];
+  const now = new Date();
+  const currentY = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  // Generate options from current year back to 2022
+  for (let y = currentY; y >= 2022; y--) {
+    options.push(`${y}-${String(y + 1).slice(2)}`);
+  }
+  return options;
+})();
 
 const SCOPE_COLORS = {
   'Scope 1': '#f97316',
