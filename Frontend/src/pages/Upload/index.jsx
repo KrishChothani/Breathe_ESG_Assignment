@@ -21,8 +21,8 @@ const SOURCES = [
   },
   {
     key: 'travel',
-    label: 'Concur Travel API',
-    description: 'Pull expense reports directly from the Concur v3 API. Flight distances are computed via Haversine from IATA codes. Hotel, Taxi, Rail and Car Rental expense types supported.',
+    label: 'Navan API',
+    description: 'Pull expense reports directly from the Navan API. Flight distances are computed via Haversine from IATA codes. Hotel, Taxi, Rail and Car Rental expense types supported.',
     icon: '✈️',
     accent: 'blue',
     component: TravelPull,

@@ -8,7 +8,7 @@ import { setActiveOrganisation, setAvailableOrganisations } from '../../store/or
 export default function Login() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const [form,    setForm]    = useState({ username: '', password: '' })
+  const [form,    setForm]    = useState({ username: 'adminkrish_cks', password: 'Krish@259' })
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
   // Multi-org selection state
@@ -183,8 +183,7 @@ export default function Login() {
         </div>
 
         <div className="mt-6 text-center">
-          <p className="text-xs text-slate-500">Demo credentials (password: <span className="text-slate-400 font-mono">BreatheESG@2024!</span>)</p>
-          <p className="text-xs text-slate-600 mt-1">admin@acme.com · analyst@acme.com · admin@beta.com</p>
+          <p className="text-xs text-slate-500">Demo credentials: <span className="text-slate-400 font-mono">adminkrish_cks</span> / <span className="text-slate-400 font-mono">Krish@259</span></p>
         </div>
         <p className="text-center text-xs text-slate-600 mt-4">BreatheESG © 2024 · Enterprise Carbon Accounting</p>
       </div>
