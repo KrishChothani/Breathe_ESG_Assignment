@@ -1,303 +1,330 @@
-# MODEL.md — BreatheESG Data Model
-
-> **This document explains every table in the system, the rationale behind the schema,
-> and how three fundamental requirements are satisfied: multi-tenancy, Scope classification,
-> and immutable audit trail.**
-
----
-
-## 1. Core Design Philosophy
-
-Three constraints shaped every table decision:
-
-1. **No cross-tenant data leakage** — a row belonging to Org A must be unreachable by Org B at the ORM layer, not just the API layer.
-2. **Source of truth is preserved at rest** — every normalised row retains a pointer to the raw file that produced it, the exact emission factor UUID used, and the human-readable calculation formula. If a factor changes next year, the historical row still shows what was used in FY 2024-25.
-3. **Status is a state machine, not a boolean** — `PENDING → APPROVED` is insufficient for SEBI BRSR assurance. The full lifecycle is `PENDING → FLAGGED → APPROVED → LOCKED`, with every transition written to an immutable `AuditLog`.
-
----
-
-## 2. Multi-Tenancy Architecture
-
-### Decision: Shared Schema with Row-Level Tenant FK
-
-We chose **shared schema / shared database** over schema-per-tenant or database-per-tenant.
+# MODEL.md — Data Model
 
 ```
-┌─────────────────────────────────────────────────┐
-│                  PostgreSQL DB                   │
-│  ┌─────────────┐    ┌─────────────┐             │
-│  │ organisations│    │    users    │             │
-│  └──────┬──────┘    └──────┬──────┘             │
-│         │ FK                │ FK                 │
-│         ▼                   ▼                   │
-│  ┌──────────────────────────────────────────┐   │
-│  │           TenantModel (abstract)          │   │
-│  │  organisation FK  +  created_at/updated_at│   │
-│  └─────────┬──────────────────────┬──────────┘   │
-│            │                      │              │
-│      SAPRow, UtilityRow,    PlantLookup,         │
-│      TravelRow,             GridEmissionFactor,  │
-│      ForecastedEmissions    AirportLookup        │
-└─────────────────────────────────────────────────┘
-```
-
-**Why not schema-per-tenant?**
-- At the 1–50 tenant scale this system targets, schema-per-tenant adds migration complexity with zero performance benefit.
-- A B-tree index on `organisation_id` (UUID FK) over a 10M-row table is faster than a schema switch round-trip.
-- Django's migration system does not support per-schema migrations without third-party packages.
-
-**Enforcement (core/models.py):**
-
-```python
-class TenantModel(TimeStampedModel):
-    organisation = models.ForeignKey(
-        "organisations.Organisation",
-        on_delete=models.CASCADE,
-        related_name="%(class)s_set",
-        db_index=True,
-    )
-    class Meta:
-        abstract = True
-```
-
-Every model holding business data (`SAPRow`, `UtilityRow`, `TravelRow`, `ForecastedEmissions`,
-`PlantLookup`, `GridEmissionFactor`, `AirportLookup`, `TravelEmissionFactor`) extends `TenantModel`.
-The `organisation` FK is **never nullable** — enforced at the DB level.
-
-The JWT token payload carries `org_slug`. The `get_active_organisation(request)` helper resolves
-the `Organisation` on every authenticated request, and every queryset is pre-filtered before returning.
-
----
-
-## 3. The `RawUpload` — Source-of-Truth Anchor
-
-```
-RawUpload
-  ├── id (UUID, PK)
-  ├── organisation FK        ← tenant scope
-  ├── source_type            ← SAP | UTILITY | TRAVEL
-  ├── file                   ← S3/local path to the original file bytes
-  ├── original_filename      ← preserved exactly as received
-  ├── status                 ← UPLOADED → PROCESSING → DONE | FAILED | OCR_EXTRACTED
-  ├── row_count              ← how many rows were parsed
-  ├── error_log (JSON)       ← list of per-row parse failures with line numbers
-  ├── uploaded_by FK         ← user who triggered ingest
-  └── created_at / updated_at
-```
-
-**Why `RawUpload` is the root anchor:**
-
-Every `SAPRow`, `UtilityRow`, and `TravelRow` has a non-nullable FK to `RawUpload`. This means:
-- "Where did this number come from?" — navigate `NormalisedRow.raw_upload.file`.
-- If a file was ingested in error, cascade-deleting `RawUpload` removes all derived rows atomically.
-- `row_count` enables completeness checks: if a 500-row CSV produced only 480 `SAPRow`s, the 20 failures are in `error_log`.
-
----
-
-## 4. `NormalisedRow` — Abstract Base for All Emission Rows
-
-```
-NormalisedRow (abstract — never instantiated directly)
-  ├── id (UUID, PK)
-  ├── organisation FK           ← from TenantModel
-  ├── raw_upload FK             ← source-of-truth pointer (non-nullable)
-  ├── status                    ← PENDING | FLAGGED | APPROVED | REJECTED | LOCKED | PARSE_FAILED
-  ├── anomaly_flags (JSON)      ← machine-detected issues: ["MAJOR_VARIANCE", "MISSING_EF"]
-  ├── parse_error (text)        ← empty if OK; full traceback if PARSE_FAILED
-  ├── co2e_kg (Decimal 12,4)    ← THE canonical emission value in kg CO2e
-  ├── ghg_scope                 ← SCOPE_1 | SCOPE_2 | SCOPE_3
-  ├── ghg_category              ← "stationary_combustion", "purchased_electricity", ...
-  │
-  ├── emission_factor_value     ← numeric factor snapshot (e.g. 0.710)
-  ├── emission_factor_unit      ← "kg CO2e / kWh"
-  ├── emission_factor_source    ← DEFRA_2024 | IPCC_AR6 | ICAO_2023 | CEA_V20 | CUSTOM
-  ├── emission_factor_year      ← calendar year the factor applies to
-  ├── emission_factor_record_id ← UUID of the EmissionFactor registry row used
-  └── formula (text)            ← "4,280 kWh × 0.710 = 3,038.80 kg CO2e"
-```
-
-### Why `co2e_kg` is Decimal, not Float
-
-Floating-point arithmetic accumulates rounding error when summed across thousands of rows.
-Annual BRSR totals are reported to 2 decimal places under external assurance. Using
-`DecimalField(max_digits=12, decimal_places=4)` ensures aggregation results are deterministic
-across any PostgreSQL version.
-
-### Why the Emission Factor is Stored Three Ways
-
-| Field | Purpose |
-|---|---|
-| `emission_factor_record_id` (UUID) | Audit FK — points to the exact versioned `EmissionFactor` row current at ingestion time |
-| `emission_factor_value` + `emission_factor_unit` | Denormalised snapshot — factor value at calculation time, preserved even if the registry row is updated or superseded |
-| `formula` (text) | Human-readable — an SEBI external auditor can verify the arithmetic without any database access |
-
-This is **intentional redundancy**. It prevents "factor drift" — updating an `EmissionFactor`
-registry entry for a new FY must never silently change historical calculations from a prior FY.
-
-> **Note on the EmissionFactor join:** `emission_factor_record_id` is a plain `UUIDField`,
-> **not a `ForeignKey`**. If a factor row is hard-deleted for compliance reasons, the historical
-> calculation value is still preserved in `emission_factor_value`. A hard FK would cascade-null
-> that reference, destroying audit evidence.
-
----
-
-## 5. The Three Concrete Row Types
-
-### 5.1 `SAPRow` — Scope 1 Direct Emissions (Fuel Procurement)
-
-```
-SAPRow extends NormalisedRow
-  ├── po_number / line_item      ← SAP Purchase Order + line item
-  ├── material_code              ← SAP MATNR
-  ├── material_description       ← human-readable fuel name
-  ├── plant_code                 ← SAP WERKS code → joins PlantLookup
-  ├── plant_name                 ← denormalised for query performance
-  ├── vendor_id                  ← SAP LIFNR
-  ├── quantity                   ← raw quantity in unit_original
-  ├── unit_original              ← SAP MEINS code ("L", "KG", "M3", "GAL")
-  ├── unit_normalised            ← canonical ISO unit ("litres", "kg")
-  ├── net_value / currency       ← procurement cost in original currency
-  ├── document_date              ← posting date — used for India FY assignment
-  ├── esg_category               ← "diesel" | "petrol" | "cng" | "lpg" | "hsd"
-  └── CO2 comparison:
-      ├── document_claimed_co2_kg   ← what supplier invoice states
-      ├── system_calculated_co2_kg  ← what BreatheESG engine computes
-      ├── co2_variance_pct          ← |doc − system| / system × 100
-      └── co2_comparison_status     ← NOT_APPLICABLE | MATCH | MINOR_VARIANCE | MAJOR_VARIANCE
-```
-
-### 5.2 `UtilityRow` — Scope 2 Purchased Electricity
-
-```
-UtilityRow extends NormalisedRow
-  ├── account_number / meter_id  ← DISCOM account and meter identifiers
-  ├── site_name                  ← building or plant name
-  ├── billing_start / billing_end ← bill period (30-60 day billing lag common)
-  ├── period_month (indexed)     ← "2025-06" — enables O(1) monthly aggregation
-  ├── consumption_original       ← as received (kWh, MWh, or "Units")
-  ├── unit_original              ← raw unit from the bill
-  ├── consumption_kwh            ← normalised to kWh — all math uses this
-  ├── grid_factor_used           ← CEA factor applied (kg CO2e / kWh)
-  ├── grid_factor_vintage_year   ← calendar year of the CEA publication
-  └── CO2 comparison (same pattern as SAPRow)
-```
-
-### 5.3 `TravelRow` — Scope 3 Business Travel
-
-```
-TravelRow extends NormalisedRow
-  ├── navan_trip_id / external_trip_id  ← idempotency key from Navan/Concur
-  ├── traveller_email / traveler_employee_id
-  ├── segment_type  ← AIR | HOTEL | CAR | RAIL | GROUND_TRANSPORT
-  │
-  ├── [AIR]   departure_airport_code, arrival_airport_code, airline_carrier,
-  │            cabin_class (ECONOMY|PREMIUM_ECONOMY|BUSINESS|FIRST),
-  │            stops, rfi_applied (Radiative Forcing Index boolean)
-  │
-  ├── [HOTEL] hotel_name, check_in_date, check_out_date,
-  │            number_of_nights, number_of_rooms, hotel_country
-  │
-  ├── [CAR]   car_vendor, car_category, fuel_type,
-  │            car_pickup_datetime, car_dropoff_datetime
-  │
-  ├── [RAIL]  rail_carrier, departure_station, arrival_station, rail_class
-  │
-  └── distance_km, distance_source ("HAVERSINE" | "ICAO_TABLE" | "REPORTED"),
-      distance_estimated (bool), cost_amount, cost_currency
+┌─ TL;DR ──────────────────────────────────────────────────────────┐
+│ Multi-tenant Django ORM with row-level tenant isolation.         │
+│ Every row belongs to one Organisation; scope is auto-assigned    │
+│ by parser type (SAP→S1, Utility→S2, Travel→S3).                 │
+│ Biggest risk: missing tenant FK on a new model leaks all data.   │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 6. `EmissionFactor` — Global Factor Registry
+## 1 · FULL ENTITY RELATIONSHIP DIAGRAM
 
+```mermaid
+erDiagram
+
+    %% ── CORE ──────────────────────────────────────────
+    Organisation {
+        uuid id PK
+        string name
+        string slug
+        datetime created_at
+    }
+    TenantUser {
+        uuid id PK
+        uuid organisation_id FK
+        uuid user_id FK
+        string role
+        bool is_active
+    }
+    User {
+        int id PK
+        string username
+        string email
+    }
+
+    %% ── REFERENCE ─────────────────────────────────────
+    EmissionFactor {
+        uuid id PK
+        string source_type
+        string ghg_scope
+        string fuel_type
+        string country_code
+        decimal factor_value
+        string unit
+        string source_name
+        string source_version
+        int validity_year
+        datetime locked_at
+    }
+    Airport {
+        int id PK
+        string iata_code
+        string icao_code
+        string name
+        decimal latitude
+        decimal longitude
+        string country_code
+    }
+
+    %% ── INGESTION ─────────────────────────────────────
+    IngestionBatch {
+        uuid id PK
+        uuid organisation_id FK
+        uuid uploaded_by FK
+        string source_type
+        string original_filename
+        string status
+        int total_rows
+        int parsed_rows
+        int failed_rows
+        datetime created_at
+    }
+    SAPRow {
+        uuid id PK
+        uuid organisation_id FK
+        uuid raw_upload_id FK
+        string plant_code
+        string material_description
+        string esg_category
+        decimal quantity
+        string unit_original
+        string unit_normalised
+        decimal co2e_kg
+        uuid emission_factor_id FK
+        string ghg_scope
+        string status
+        datetime document_date
+        datetime ingested_at
+        uuid ingested_by FK
+        datetime last_edited_at
+        uuid last_edited_by FK
+        string edit_reason
+        string source_type
+    }
+    UtilityRow {
+        uuid id PK
+        uuid organisation_id FK
+        uuid raw_upload_id FK
+        string meter_id
+        string site_name
+        date billing_start
+        date billing_end
+        int period_month
+        decimal consumption_kwh
+        decimal co2e_kg
+        uuid emission_factor_id FK
+        string ghg_scope
+        string status
+        datetime ingested_at
+    }
+    TravelRow {
+        uuid id PK
+        uuid organisation_id FK
+        uuid raw_upload_id FK
+        string segment_type
+        string departure_airport_code
+        string arrival_airport_code
+        uuid departure_airport_id FK
+        uuid arrival_airport_id FK
+        decimal distance_km
+        string cabin_class
+        string traveller_email
+        decimal co2e_kg
+        uuid emission_factor_id FK
+        string ghg_scope
+        string status
+        datetime ingested_at
+    }
+
+    %% ── AUDIT ─────────────────────────────────────────
+    AuditLog {
+        uuid id PK
+        uuid organisation_id FK
+        uuid row_id
+        string row_type
+        string action
+        uuid performed_by FK
+        jsonb payload
+        datetime created_at
+    }
+    RowComment {
+        uuid id PK
+        uuid organisation_id FK
+        uuid row_id
+        string row_type
+        uuid author FK
+        string body
+        bool is_finding
+        bool resolved
+        datetime created_at
+    }
+
+    %% ── RELATIONSHIPS ─────────────────────────────────
+    Organisation     ||--o{ TenantUser      : "has members"
+    Organisation     ||--o{ SAPRow          : "owns"
+    Organisation     ||--o{ UtilityRow      : "owns"
+    Organisation     ||--o{ TravelRow       : "owns"
+    Organisation     ||--o{ IngestionBatch  : "owns"
+    Organisation     ||--o{ AuditLog        : "scoped to"
+    Organisation     ||--o{ RowComment      : "scoped to"
+    User             ||--o{ TenantUser      : "identity"
+    IngestionBatch   ||--o{ SAPRow          : "produced"
+    IngestionBatch   ||--o{ UtilityRow      : "produced"
+    IngestionBatch   ||--o{ TravelRow       : "produced"
+    EmissionFactor   ||--o{ SAPRow          : "applied to"
+    EmissionFactor   ||--o{ UtilityRow      : "applied to"
+    EmissionFactor   ||--o{ TravelRow       : "applied to"
+    Airport          ||--o{ TravelRow       : "departure"
+    Airport          ||--o{ TravelRow       : "arrival"
 ```
-EmissionFactor (NOT tenant-scoped — shared reference table)
-  ├── scope                     ← SCOPE_1 | SCOPE_2 | SCOPE_3
-  ├── fuel_or_activity_type    ← "diesel" | "electricity_india" | "flight_short_haul"
-  ├── factor_value              ← numeric (e.g. 2.6533 for diesel)
-  ├── factor_unit               ← "kg CO2e / litre"
-  ├── source_name               ← CEA_V20 | DEFRA_2024 | IPCC_AR6 | ICAO_2023 | INDIA_GHG
-  ├── source_version            ← "V20.0 (2024 Publication)"
-  ├── valid_from_fy / valid_to_fy ← India FY validity window ("2024-25" / null = current)
-  ├── country_code              ← "IN" default (CEA factors are India-specific)
-  ├── is_active                 ← false = superseded; never deleted
-  └── unique_together: (scope, fuel_or_activity_type, valid_from_fy, country_code)
-```
-
-**Why global, not tenant-scoped?**
-
-`EmissionFactor` is seeded from official regulatory publications. It is a reference table, not
-operational data. Tenants reference it via `emission_factor_record_id` but cannot modify it.
-Tenant-specific overrides use `GridEmissionFactor` (electricity) and `TravelEmissionFactor`
-(travel) which are tenant-scoped.
 
 ---
 
-## 7. Audit Trail System
+## 2 · MULTI-TENANCY ARCHITECTURE
 
-### 7.1 `AuditLog` — Immutable Event Log
+```mermaid
+graph TD
+    subgraph REQUEST["Incoming Request"]
+        JWT["JWT Token\n(user_id)"]
+    end
 
-```python
-class AuditLog(models.Model):
-    def save(self, *args, **kwargs):
-        if not self._state.adding:
-            raise PermissionDenied("AuditLog records are immutable.")
-    def delete(self, *args, **kwargs):
-        raise PermissionDenied("AuditLog records cannot be deleted.")
+    subgraph RESOLVE["Tenant Resolution"]
+        JWT --> TU["TenantUser lookup\n(user_id + org claim)"]
+        TU --> ROLE["Role extracted\nADMIN / ANALYST / AUDITOR"]
+    end
+
+    subgraph PERMISSION["Permission Check"]
+        ROLE --> P1{"Is tenant\nmember?"}
+        P1 -- "✗ No" --> HTTP403["403 Forbidden\nno data returned"]
+        P1 -- "✓ Yes" --> P2{"Role has\npermission?"}
+        P2 -- "✗ No" --> HTTP403
+        P2 -- "✓ Yes" --> QS["Queryset filter\n.filter(organisation=org)"]
+    end
+
+    subgraph DATA["Data Layer"]
+        QS --> ROWS["Only this org's rows\nreturned"]
+    end
+
+    style HTTP403 fill:#ef4444,color:#fff
+    style ROWS fill:#22c55e,color:#fff
 ```
 
-Fields: `organisation`, `row_id`, `row_source` (SAP/UTILITY/TRAVEL), `action`
-(INGESTED | FLAGGED | APPROVED | REJECTED | RESUBMITTED | COMMENT_ADDED | EXPORTED),
-`performed_by`, `performed_at`, `previous_status`, `new_status`, `note`, `ip_address`, `source_file`.
+**RBAC Hierarchy:**
 
-### 7.2 `RowComment` — Partially Immutable Findings
-
-`body`, `is_finding`, and `author` are immutable after creation. Only `resolved` / `resolved_by` /
-`resolved_at` can be updated — closing a finding without erasing the original concern.
-
-### 7.3 Status State Machine
-
-```
-PARSE_FAILED ─────────────────────────── (terminal)
-PENDING ──► FLAGGED ──► APPROVED ──► LOCKED
-     └───────────────► APPROVED ──► LOCKED
-     └──────────────────────────► REJECTED (terminal)
-```
-
-`LOCKED` = row included in an export to the external auditor. API rejects status changes
-on `LOCKED` rows except from a superuser account.
+| Role | Upload | Review | Approve/Reject | Lock | Admin |
+|------|--------|--------|----------------|------|-------|
+| ADMIN | ✓ | ✓ | ✓ | ✓ | ✓ |
+| ANALYST | ✓ | ✓ | ✓ | ✗ | ✗ |
+| AUDITOR | ✗ | ✓ (read) | ✗ | ✓ | ✗ |
+| VIEWER | ✗ | ✓ (read) | ✗ | ✗ | ✗ |
 
 ---
 
-## 8. `ForecastedEmissions` — Projections in a Separate Table
+## 3 · SCOPE 1/2/3 CATEGORISATION FLOW
 
-Fields: `financial_year`, `month_number` (1=Apr…12=Mar), `scope`, `co2e_tonnes_central`,
-`co2e_tonnes_lower/upper` (90% CI), `forecast_method` (RUN_RATE | ETS | ACTIVITY_DRIVEN | NOWCAST),
-`confidence_pct`, `is_nowcast`, `rmsfe`, `activity_driver_air/hotel/ground`,
-`unique_together: (organisation, financial_year, month_number, scope)`.
+```mermaid
+flowchart TD
+    UPLOAD["File Upload / API Call\n(IngestionBatch created)"] --> DETECT
 
-**Structural separation from actuals is intentional.** An auditor running SEBI BRSR verification
-must be able to get clean actuals with no WHERE clause gymnastics. Projections live in a different
-table with a different lifecycle (regenerated on demand; not audit-logged).
+    DETECT{"Source type\ndetected?"}
+    DETECT -- "SAP flat file\n.txt / .csv" --> SAP_PARSE
+    DETECT -- "Utility PDF\n(OCR)" --> UTIL_PARSE
+    DETECT -- "Travel JSON\n(Navan API)" --> TRAV_PARSE
+
+    SAP_PARSE["SAP Parser\n· Split columns\n· Normalise MEINS unit\n· Match WERKS → PlantLookup"]
+    SAP_PARSE --> SAP_SCOPE["ghg_scope = SCOPE_1\nghg_category = STATIONARY_COMBUSTION\nor MOBILE_COMBUSTION"]
+    SAP_SCOPE --> SAP_CO2["CO2e = quantity_litres × IPCC_factor\n(e.g. diesel × 2.6533 kgCO2e/L)"]
+
+    UTIL_PARSE["Utility Parser\n· OCR page text\n· Extract kWh, meter_id\n· Parse billing dates"]
+    UTIL_PARSE --> UTIL_SCOPE["ghg_scope = SCOPE_2\nghg_category = PURCHASED_ELECTRICITY"]
+    UTIL_SCOPE --> UTIL_CO2["CO2e = kWh × 0.710\n(CEA FY24-25, location-based)"]
+
+    TRAV_PARSE["Travel Parser\n· Parse segment JSON\n· Lookup IATA → Airport coords\n· Haversine distance calc"]
+    TRAV_PARSE --> TRAV_SCOPE["ghg_scope = SCOPE_3\nghg_category = BUSINESS_TRAVEL"]
+    TRAV_SCOPE --> TRAV_CO2["CO2e = distance_km × class_factor × RF\n(DEFRA/ICAO, RF=1.9)"]
+
+    SAP_CO2 --> STATUS
+    UTIL_CO2 --> STATUS
+    TRAV_CO2 --> STATUS
+
+    STATUS{"Parse\nsuccess?"}
+    STATUS -- "✓" --> PENDING["status = PENDING\nAuditLog: INGESTED + CALCULATED"]
+    STATUS -- "✗" --> FAILED["status = PARSE_FAILED\nparse_error = reason\nAuditLog: FAILED"]
+
+    style PENDING fill:#22c55e,color:#fff
+    style FAILED fill:#ef4444,color:#fff
+```
 
 ---
 
-## 9. Unit Normalisation
+## 4 · SOURCE-OF-TRUTH TRACKING
 
-| Dimension | Canonical unit | Display unit |
+**Fields on every row model:**
+
+| Field | Purpose | Editable? |
 |---|---|---|
-| Energy | kWh | kWh / MWh |
-| Fuel mass | kg or litres (fuel-specific) | — |
-| Distance | km | km |
-| Emissions (storage) | **kg CO2e** (Decimal 12,4) | — |
-| Emissions (display/BRSR) | **tCO2e** (÷ 1000) | rounded to 2 d.p. |
-| Money | original currency preserved | INR for SEBI intensity ratios |
+| `source_type` | SAP / UTILITY / TRAVEL | ✗ Immutable |
+| `source_file` | original filename from `IngestionBatch` | ✗ Immutable |
+| `ingested_at` | creation timestamp | ✗ Immutable |
+| `ingested_by` | user FK (null if system trigger) | ✗ Immutable |
+| `parsed_by_version` | parser semver string e.g. `sap-parser@1.4.2` | ✗ Immutable |
+| `emission_factor_id` | FK to `EmissionFactor` — factor locked at calc time | ✗ Immutable |
+| `last_edited_at` | null if never manually edited | ✓ System-set |
+| `last_edited_by` | user FK | ✓ System-set |
+| `edit_reason` | required free-text if row is edited | ✓ Analyst |
+| `is_system_derived` | True if co2e_kg was auto-calculated | ✓ System-set |
 
-SAP MEINS code normalisation on ingestion:
+**Lifecycle Sequence:**
+
+```mermaid
+sequenceDiagram
+    participant U as Analyst
+    participant API as Ingestion API
+    participant DB as Database
+    participant AL as AuditLog
+
+    U->>API: POST /upload (file)
+    API->>DB: IngestionBatch.create()
+    API->>DB: Row.create(status=PENDING)
+    API->>AL: INGESTED {file, row_count, timestamp}
+
+    API->>DB: co2e_kg = quantity × factor
+    API->>AL: CALCULATED {factor_id, factor_value, formula}
+
+    U->>API: PATCH /row/{id} (edit value)
+    API->>DB: Row.update(value, last_edited_by, edit_reason)
+    API->>AL: EDITED {field, old_value, new_value, reason}
+
+    U->>API: POST /approve {row_id}
+    API->>DB: Row.update(status=APPROVED)
+    API->>AL: APPROVED {approver, timestamp}
+
+    Note over AL: AuditLog is append-only.<br/>No UPDATE or DELETE ever.
 ```
-"L"   → litres (×1)
-"KG"  → kg     (×1)
-"M3"  → litres (×1000, for LPG/CNG gas volumes)
-"GAL" → litres (×3.78541)
-"TO"  → kg     (×1000, metric tonnes)
+
+---
+
+## 5 · UNIT NORMALISATION FLOWCHART
+
+```mermaid
+flowchart TD
+    IN["Raw MEINS value\nfrom SAP row"] --> UPPER["upper().strip()"]
+
+    UPPER --> L{"L, LITRE,\nLTR, LITR?"}
+    UPPER --> GAL{"GAL, GALLON,\nGALLONE?"}
+    UPPER --> KG{"KG, KGS,\nKILOGRAM?"}
+    UPPER --> M3{"M3, M³,\nCBM?"}
+    UPPER --> MT{"MT, TO,\nTONNE, TON?"}
+    UPPER --> UNK{"No match"}
+
+    L   -- "store as-is" --> LITRES["unit_normalised = L\nquantity_litres = MENGE"]
+    GAL -- "× 3.785411784" --> LITRES
+    KG  -- "store as-is" --> KGS["unit_normalised = KG\nquantity_kg = MENGE"]
+    M3  -- "store as-is" --> M3OUT["unit_normalised = M3\nquantity_m3 = MENGE"]
+    MT  -- "× 1000" --> KGS
+
+    UNK --> FAIL["status = PARSE_FAILED\nparse_error = 'Unknown unit: [X]'\nAuditLog: FAILED action\nRow excluded from CO2 totals"]
+
+    LITRES  --> CO2["CO2e = normalised_qty × IPCC_factor"]
+    KGS     --> CO2
+    M3OUT   --> CO2
+
+    style FAIL fill:#ef4444,color:#fff
+    style CO2 fill:#22c55e,color:#fff
 ```
+
+> Analyst path after FAILED row: download error report → fix source file → re-upload. No silent best-guess is ever attempted.

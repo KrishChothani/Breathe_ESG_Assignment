@@ -1,126 +1,127 @@
-# TRADEOFFS.md — Three Things Deliberately Not Built
+# TRADEOFFS.md — Deliberate Tradeoffs
 
-> **Each entry states what was not built, what was built instead, and the explicit
-> tradeoff being made. These are engineering decisions, not oversights.**
-
----
-
-## Tradeoff 1 — Real-Time Streaming Ingestion vs Batch File Upload
-
-### What Was Not Built
-A real-time data pipeline using webhooks or streaming APIs. In production ESG platforms,
-Concur and Navan both offer real-time webhooks that push travel bookings as they happen.
-SAP can be configured to push purchase document events via IDoc or RFC. This would eliminate
-the need for file uploads entirely and give sub-minute data latency.
-
-### What Was Built Instead
-A **batch file upload** model. The user uploads a CSV/Excel export from their system. The
-`RawUpload` table tracks the file, a background parser creates `NormalisedRow` records, and
-the upload is processed in one atomic transaction.
-
-### The Explicit Tradeoff
-
-| Dimension | Real-Time Streaming | Batch File Upload (built) |
-|---|---|---|
-| Data freshness | Sub-minute | Days (upload cadence) |
-| Infrastructure | Kafka/SQS + consumer workers | Standard Django + file storage |
-| Error handling | Per-event, complex retry logic | Per-file, single `error_log` JSON |
-| Auditability | Harder (stream is ephemeral) | Easier (`RawUpload` is the durable anchor) |
-| Implementation time | 3–4× longer | Baseline |
-
-**Why this tradeoff makes sense for BRSR:**
-
-SEBI BRSR is an annual disclosure, not a live dashboard. Data is reviewed and approved by
-a compliance officer before it enters the report. A batch model that preserves the exact
-uploaded file as the audit anchor (`RawUpload.file`) is actually *more* auditable than a
-stream where the original source event is ephemeral. The external assurer can download the
-exact file that produced the numbers.
-
-Real-time streaming would be the right call for an operational energy management system
-where alerts on consumption spikes have economic value. For BRSR disclosure, batch is sufficient
-and architecturally cleaner.
+```
+┌─ TL;DR ──────────────────────────────────────────────────────────┐
+│ Three features deliberately excluded to ship a working prototype.│
+│ Most impactful omission: real-time SAP integration (OData/RFC).  │
+│ Biggest audit risk: single-country emission factor covers only   │
+│ India grid; overseas facilities would report zero Scope 2.       │
+└──────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Tradeoff 2 — Automated ML-Based Scope Classification vs Rule-Based + Manual Override
+## TRADEOFF 1 · Real-Time SAP Integration
 
-### What Was Not Built
-A machine learning classifier that reads material descriptions, vendor names, and procurement
-patterns to automatically assign `SCOPE_1`, `SCOPE_2`, or `SCOPE_3` with high precision.
-This is technically tractable: fine-tuned BERT on ESG procurement datasets achieves ~92%
-accuracy on scope classification benchmarks.
+**What was NOT built:**
+- OData service connector (SAP Gateway / BTP)
+- RFC/BAPI polling or IDocs subscription
 
-### What Was Built Instead
-A **deterministic rule-based classifier** with a manual override mechanism:
+**Why not:**
+SAP OData exposure requires BASIS team involvement, firewall rules, and a dedicated SAP Gateway server — none of which can be prototyped without actual client SAP credentials. Delivery time would be weeks, not days.
 
-1. `PlantLookup.default_scope` — admin-configured per SAP WERKS code
-2. Keyword matching on `esg_category` — regex patterns against material description
-3. Manual override — any `PENDING/FLAGGED` row's `ghg_scope` can be changed; change is audit-logged
+**What was built instead:**
+Manual flat-file upload — analyst exports MB51/ME2M from SAP GUI and uploads the `.txt` file.
 
-### The Explicit Tradeoff
+**Production path:**
 
-| Dimension | ML Classifier | Rule-Based (built) |
-|---|---|---|
-| Accuracy | ~92% on benchmark data | ~85% on well-configured systems |
-| Explainability | Low (black box) | High (auditor can trace rule) |
-| Regulatory acceptability | Questionable under SEBI assurance | Clean |
-| Edge case handling | Trained on historical data, fails on new material types | Fails predictably, surfaced as FLAGGED |
-| Maintenance | Requires periodic retraining | Rules updated by admin |
+```mermaid
+flowchart LR
+    subgraph NOW["Current (Prototype)"]
+        SAP1["SAP GUI\nMB51 export"] -->|manual .txt upload| API1["Upload API\n/ingestion/upload/"]
+    end
 
-**Why this tradeoff makes sense for BRSR:**
+    subgraph PROD["Production Path"]
+        SAP2["SAP S/4HANA\nOData Gateway"] -->|REST GET /sap/opu/odata/| ADAPTER["OData Adapter\n(replaces file parser)"]
+        ADAPTER -->|normalised JSON| API2["Ingestion API\n(same downstream logic)"]
+        SCHED["Celery Beat\n(nightly schedule)"] -->|triggers| ADAPTER
+    end
 
-SEBI BRSR Core (Circular July 2023) requires external assurance from FY 2025-26 for the
-top 500 listed entities. An external assurer performing reasonable assurance over GHG emissions
-must be able to trace every classification decision to a documented rule. "The ML model predicted
-Scope 1 with 87% confidence" is not a defensible audit response.
+    NOW -.->|"adapter replaces\nparser only"| PROD
+```
 
-The rule-based system fails more loudly (FLAGGED status, human review) and the failure is
-traceable. The ML system fails more quietly (wrong scope, no alert) and the failure is invisible
-until an auditor catches it three months later.
+**What must change:** Parser module replaced by an `ODataClient` class; ingestion downstream (normalisation → CO2 calc → AuditLog) is identical.
+
+**Risk if ignored:**
+Analyst forgets monthly export → BRSR submission based on incomplete data with no automated freshness alert.
 
 ---
 
-## Tradeoff 3 — Per-Gas GHG Breakdown vs CO2e-Only Reporting
+## TRADEOFF 2 · Multi-Country Emission Factors
 
-### What Was Not Built
-A full multi-gas GHG inventory tracking CO₂, CH₄, N₂O, HFCs, PFCs, SF₆, and NF₃ separately.
-SEBI BRSR Core (under SEBI/HO/CFD/CFD-SEC-2/P/CIR/2023/122) explicitly mentions that Scope 1
-should be broken down by gas type "where available." GHG Protocol's corporate standard has always
-required this breakdown for a complete inventory.
+**What was NOT built:**
+- UK DEFRA grid intensity factors (per kWh, updated quarterly)
+- US EPA eGRID state-level factors (52 grid regions)
+- EU AIB residual mix factors (per country, per year)
 
-### What Was Built Instead
-**CO2e-only reporting**, where all gases are converted to carbon dioxide equivalent at ingestion
-time using IPCC AR6 Global Warming Potential values, and stored as a single `co2e_kg` field.
+**Why not:**
+Building a complete multi-country factor registry requires sourcing, validating, and versioning 100+ factors from 15+ regulatory bodies — a standalone data engineering task beyond a prototype sprint.
 
-The conversion happens implicitly in the emission factor: the `EmissionFactor.factor_value`
-for diesel (2.6533 kg CO2e / litre) already incorporates the CH₄ and N₂O components using
-AR6 100-year GWP values (CH₄ = 27.9, N₂O = 273).
+**What was built instead:**
+India CEA V20.0 factor only: `0.710 kgCO2e/kWh` for all `UtilityRow` records, applied uniformly regardless of meter location.
 
-### The Explicit Tradeoff
+**Production path:**
 
-| Dimension | Per-Gas Breakdown | CO2e-Only (built) |
-|---|---|---|
-| SEBI BRSR compliance | Fully compliant (gas-level detail) | Compliant where gas data unavailable |
-| Data availability | Requires fuel-specific gas emission factors and metering | Any procurement data with quantity |
-| Schema complexity | 7+ gas columns per row + GWP lookup table | 1 decimal field |
-| Auditor utility | Enables gas-specific reduction target tracking | Enables total GHG management |
-| Data sources required | Process-level measurement for CH₄/N₂O | Standard procurement export |
+```mermaid
+flowchart TD
+    subgraph NOW["Current"]
+        UR1["UtilityRow\n(any country)"] --> F1["EmissionFactor\nCEA IN 0.710"]
+        F1 --> CO1["CO2e calculated"]
+    end
 
-**Why this tradeoff makes sense here:**
+    subgraph PROD["Production"]
+        UR2["UtilityRow"] --> GEO["country_code\ndetected from meter address\n(PDF OCR / PlantLookup)"]
+        GEO --> LOOKUP{"Factor\nlookup\ncountry + year"}
+        LOOKUP -- "IN" --> CEA["CEA 0.710"]
+        LOOKUP -- "GB" --> DEFRA["DEFRA 0.207"]
+        LOOKUP -- "US" --> EGRID["EPA eGRID\n(state-level)"]
+        LOOKUP -- "not found" --> FLAG["status = FLAGGED\nmissing_factor"]
+        CEA & DEFRA & EGRID --> CO2["CO2e calculated\nper-country"]
+    end
+```
 
-The practical reality is that Indian manufacturing companies generating SAP procurement exports
-do not have process-level CH₄ and N₂O measurements from combustion equipment. The data
-literally does not exist in the source systems. Building a schema that demands gas-level
-breakdown would result in 90% null columns.
+**What must change:** `EmissionFactor` table already has `country_code` field. Add factor rows per country + add `country_code` detection step in Utility parser.
 
-The SEBI carve-out "where available" acknowledges this. The CO2e-only approach is compliant,
-matches what the source data can actually support, and avoids a false precision problem where
-displaying "CO₂: 1,247t, CH₄: 0t, N₂O: 0t" would imply zero fugitive emissions rather than
-"not measured."
+**Risk if ignored:**
+An overseas facility reports electricity consumption → system applies India CEA factor → Scope 2 figure is wrong by up to 3.5× (UK grid is ~0.207 vs India 0.710); assurance firm flags material misstatement.
 
-**What would trigger building this:**
+---
 
-If a client has direct emissions from industrial processes (cement kiln, steel furnace, chemical
-reactor), those process emissions require CH₄/N₂O metering and a per-gas breakdown becomes
-both possible and mandatory. The schema change would add `co2_kg`, `ch4_kg_co2e`, `n2o_kg_co2e`
-columns to `NormalisedRow` and a `GWPLookup` table.
+## TRADEOFF 3 · Market-Based Scope 2 Accounting
+
+**What was NOT built:**
+- Renewable Energy Certificate (REC) model and tracking
+- Power Purchase Agreement (PPA) contract management
+- Supplier-specific emission factors from Energy Attribute Certificates
+
+**Why not:**
+Market-based Scope 2 requires legal contract data (PPAs), certificate serial numbers (RECs), and supplier-specific residual mix factors — none of which exist in a standard utility bill. It is a distinct data collection and verification workflow.
+
+**What was built instead:**
+Location-based Scope 2 only — `co2e_kg = consumption_kwh × 0.710` using the CEA national grid average. This is GHG Protocol compliant as a minimum disclosure.
+
+**Production path:**
+
+```mermaid
+flowchart LR
+    subgraph NOW["Current (Location-Based Only)"]
+        KWH["kWh consumed"] --> LB["× CEA 0.710\n= location-based CO2e"]
+    end
+
+    subgraph PROD["Production (Dual Method)"]
+        KWH2["kWh consumed"] --> LB2["× CEA factor\n= location-based CO2e"]
+
+        REC["REC Model\n(certificate serial,\nMWh, vintage year)"] --> MB["Market-based CO2e\n(REC quantity × 0\nor residual mix factor)"]
+
+        PPA["PPA Contract Model\n(supplier, contracted kWh,\nsupplier EF)"] --> MB
+
+        LB2 & MB --> BRSR["BRSR Report\nshows BOTH methods\nas required by GHG Protocol"]
+    end
+
+    NOW -.->|"add REC + PPA\nmodels"| PROD
+```
+
+**What must change:** Add `REC` model, add `PPA` model, link both to `UtilityRow`, add dual-column BRSR export. `UtilityRow.co2e_kg` becomes `co2e_kg_location` + `co2e_kg_market`.
+
+**Risk if ignored:**
+Client has solar PPA or REC purchases → legally entitled to report lower market-based Scope 2 → using location-based only overstates emissions → reputational and disclosure accuracy risk in public BRSR filing.
