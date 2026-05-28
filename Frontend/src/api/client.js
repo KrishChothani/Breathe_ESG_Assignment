@@ -5,13 +5,21 @@ import { TOKEN_KEY, REFRESH_KEY } from '../utils/constants'
 // In local dev, it falls back to '/api/v1' which Vite proxies to localhost:8000.
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
+// Detect if we're calling an ngrok tunnel (needs special bypass header)
+const isNgrok = BASE_URL.includes('ngrok')
+
 const client = axios.create({
   baseURL: BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+    // ngrok free tier shows a browser warning page for all requests.
+    // This header tells ngrok to skip the interstitial and serve the real response.
+    ...(isNgrok ? { 'ngrok-skip-browser-warning': 'true' } : {}),
+  },
 })
 
 // Helper — reads token from either key variant
-const getToken  = () => localStorage.getItem(TOKEN_KEY)  || localStorage.getItem('access_token')
+const getToken   = () => localStorage.getItem(TOKEN_KEY)  || localStorage.getItem('access_token')
 const getRefresh = () => localStorage.getItem(REFRESH_KEY) || localStorage.getItem('refresh_token')
 
 // Attach JWT on every request
@@ -31,7 +39,7 @@ client.interceptors.response.use(
       const refresh = getRefresh()
       if (refresh) {
         try {
-          const { data } = await axios.post(`${API_BASE}/auth/refresh/`, { refresh })
+          const { data } = await axios.post(`${BASE_URL}/auth/refresh/`, { refresh })
           // Store under both key names to keep everything in sync
           localStorage.setItem(TOKEN_KEY,       data.access)
           localStorage.setItem('access_token',  data.access)
