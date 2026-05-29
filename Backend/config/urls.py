@@ -18,6 +18,7 @@ urlpatterns = [
     path('api/v1/emissions/',       include('apps.emissions.urls')),
     path('api/v1/review/',          include('apps.review.urls')),
     path('api/v1/reports/',         include('apps.reports.urls')),
+    path('api/v1/chatbot/',         include('apps.chatbot.urls')),   # LangGraph Text-to-SQL agent
 ]
 
 # Serve uploaded files in development

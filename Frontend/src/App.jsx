@@ -14,6 +14,7 @@ import PlantLookup from './pages/PlantLookup/index'
 import Organisation from './pages/Organisation/index'
 import BRSRReport from './pages/BRSRReport/index'
 import EmissionFactors from './pages/EmissionFactors/index'
+import ChatbotWidget from './components/Chatbot/index'
 
 /**
  * PublicRoute — wraps public pages (Landing, Login).
@@ -65,6 +66,8 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      {/* Global Emissions Assistant — rendered outside router so it persists on all pages */}
+      <ChatbotWidget />
     </Provider>
   )
 }

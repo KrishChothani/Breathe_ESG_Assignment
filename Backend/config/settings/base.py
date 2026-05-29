@@ -69,6 +69,7 @@ LOCAL_APPS = [
     'apps.emissions',
     'apps.review',
     'apps.reports',
+    'apps.chatbot',            # LangGraph Text-to-SQL chatbot
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -202,3 +203,29 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^https://[a-z0-9-]+\.ngrok\.io$',
     r'^https://[a-zA-Z0-9-]+\.vercel\.app$',    # any vercel preview URL
 ]
+
+# ── Chatbot / LangGraph ────────────────────────────────────────────────────────
+# GEMINI_API_KEY must be set in your .env file.
+# CHATBOT_MODEL defaults to gemini-1.5-pro (Gemini).
+GEMINI_API_KEY     = os.environ.get('GEMINI_API_KEY', '')
+CHATBOT_MODEL      = os.environ.get('CHATBOT_MODEL', 'gemini-2.0-flash')
+CHATBOT_MAX_TOKENS = int(os.environ.get('CHATBOT_MAX_TOKENS', '1000'))
+CHATBOT_RATE_LIMIT = int(os.environ.get('CHATBOT_RATE_LIMIT', '30'))  # per user per hour
+
+# ── Cache (conversation memory + rate limiting) ───────────────────────────────
+# If REDIS_URL is set, use Redis. Otherwise fall back to in-process LocMemCache.
+_REDIS_URL = os.environ.get('REDIS_URL', '')
+if _REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND':  'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': _REDIS_URL,
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND':  'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'breathe-esg-chatbot',
+        }
+    }

@@ -40,6 +40,12 @@ python-dotenv==1.2.2
 requests==2.34.2
 six==1.17.0
 sqlparse==0.5.5
+# ── LangGraph / LangChain chatbot dependencies ────────────────────────────────
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-google-genai>=1.0.0
+langgraph>=0.2.0
+redis>=5.0.0
 tqdm==4.67.3
 typing-inspection==0.4.2
 typing_extensions==4.15.0
