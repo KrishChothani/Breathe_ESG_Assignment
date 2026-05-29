@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import client from '../../api/client'
 
 const ROLES = ['ANALYST', 'AUDITOR', 'VIEWER', 'ADMIN']
 
@@ -20,20 +21,11 @@ export default function InviteMemberModal({ orgName, onInvited, onClose }) {
     setLoading(true)
     setError(null)
     try {
-      const token = localStorage.getItem('access_token')
-      const res   = await fetch('/api/v1/organisations/members/invite/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email, role }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data?.email?.[0] || data?.error || 'Failed to invite member.')
-        return
-      }
+      await client.post('/organisations/members/invite/', { email, role })
       onInvited(`${email} has been invited as ${role}.`)
     } catch (err) {
-      setError('Network error. Please try again.')
+      const data = err.response?.data
+      setError(data?.email?.[0] || data?.error || data?.detail || 'Failed to invite member.')
     } finally {
       setLoading(false)
     }

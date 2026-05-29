@@ -3,10 +3,16 @@
  * ======================
  * Members management page for the active organisation.
  * Admins can invite, change roles, and remove members.
+ *
+ * FIX: Replaced all raw fetch() calls with the shared Axios client so that:
+ *  1. The correct, always-fresh token is read (breathe_access via interceptor).
+ *  2. 401 → silent refresh → retry is handled automatically.
+ *  3. Fetch no longer races against Redux hydration (activeOrg in useEffect deps).
  */
 
 import { useState, useEffect } from 'react'
 import { useSelector } from 'react-redux'
+import client from '../../api/client'
 import InviteMemberModal from './InviteMemberModal'
 import MemberRow from './MemberRow'
 
@@ -14,11 +20,11 @@ export default function OrganisationPage() {
   const activeOrg  = useSelector((s) => s.organisation.activeOrg)
   const activeRole = useSelector((s) => s.organisation.activeRole)
 
-  const [members,       setMembers]       = useState([])
-  const [loading,       setLoading]       = useState(true)
-  const [error,         setError]         = useState(null)
-  const [showInvite,    setShowInvite]    = useState(false)
-  const [successMsg,    setSuccessMsg]    = useState('')
+  const [members,    setMembers]    = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState(null)
+  const [showInvite, setShowInvite] = useState(false)
+  const [successMsg, setSuccessMsg] = useState('')
 
   const isAdmin = activeRole === 'ADMIN'
 
@@ -26,20 +32,20 @@ export default function OrganisationPage() {
     setLoading(true)
     setError(null)
     try {
-      const token = localStorage.getItem('access_token')
-      const res   = await fetch('/api/v1/organisations/members/', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setMembers(await res.json())
+      const { data } = await client.get('/organisations/members/')
+      setMembers(Array.isArray(data) ? data : [])
     } catch (e) {
-      setError('Failed to load members. Please refresh.')
+      const detail = e.response?.data?.error || e.response?.data?.detail
+      setError(detail || 'Failed to load members. Please refresh.')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchMembers() }, [])
+  // Re-fetch whenever the active org changes (handles Redux hydration race)
+  useEffect(() => {
+    fetchMembers()
+  }, [activeOrg?.id])
 
   const handleInvited = (msg) => {
     setShowInvite(false)
@@ -49,26 +55,25 @@ export default function OrganisationPage() {
   }
 
   const handleRoleChange = async (memberId, newRole) => {
-    const token = localStorage.getItem('access_token')
-    const res   = await fetch(`/api/v1/organisations/members/${memberId}/`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ role: newRole }),
-    })
-    if (res.ok) { fetchMembers() }
+    try {
+      await client.patch(`/organisations/members/${memberId}/`, { role: newRole })
+      fetchMembers()
+    } catch (e) {
+      const detail = e.response?.data?.error || 'Role update failed.'
+      setError(detail)
+    }
   }
 
   const handleRemove = async (memberId, name) => {
     if (!window.confirm(`Remove ${name} from ${activeOrg?.name}?`)) return
-    const token = localStorage.getItem('access_token')
-    const res   = await fetch(`/api/v1/organisations/members/${memberId}/`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (res.ok) {
+    try {
+      await client.delete(`/organisations/members/${memberId}/`)
       setSuccessMsg(`${name} has been removed.`)
       fetchMembers()
       setTimeout(() => setSuccessMsg(''), 4000)
+    } catch (e) {
+      const detail = e.response?.data?.error || 'Failed to remove member.'
+      setError(detail)
     }
   }
 
@@ -108,10 +113,10 @@ export default function OrganisationPage() {
       {/* Stats row */}
       <div className="grid grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total Members', value: members.length, color: 'from-slate-600 to-slate-800' },
+          { label: 'Total Members', value: members.length,          color: 'from-slate-600 to-slate-800'   },
           { label: 'Admins',        value: ROLE_COUNTS.ADMIN   || 0, color: 'from-violet-500 to-purple-700' },
-          { label: 'Analysts',      value: ROLE_COUNTS.ANALYST || 0, color: 'from-emerald-500 to-teal-700' },
-          { label: 'Auditors',      value: ROLE_COUNTS.AUDITOR || 0, color: 'from-amber-500 to-orange-700' },
+          { label: 'Analysts',      value: ROLE_COUNTS.ANALYST || 0, color: 'from-emerald-500 to-teal-700'  },
+          { label: 'Auditors',      value: ROLE_COUNTS.AUDITOR || 0, color: 'from-amber-500 to-orange-700'  },
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5">
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{label}</p>
@@ -129,6 +134,19 @@ export default function OrganisationPage() {
         </div>
       )}
 
+      {/* Error message */}
+      {error && !loading && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 font-medium">
+          <span>⚠</span> {error}
+          <button
+            onClick={() => { setError(null); fetchMembers() }}
+            className="ml-auto text-xs underline hover:no-underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Members table */}
       <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -140,8 +158,6 @@ export default function OrganisationPage() {
           <div className="flex items-center justify-center py-16">
             <div className="h-8 w-8 rounded-full border-2 border-emerald-200 border-t-emerald-600 animate-spin" />
           </div>
-        ) : error ? (
-          <div className="py-12 text-center text-sm text-red-500">{error}</div>
         ) : members.length === 0 ? (
           <div className="py-12 text-center text-sm text-slate-400">No members yet. Invite someone!</div>
         ) : (
