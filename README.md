@@ -1,6 +1,18 @@
 # BreatheESG — Carbon Accounting Platform
 
-A full-stack ESG carbon accounting platform built with Django (REST API) and React (Vite).
+A full-stack enterprise ESG carbon accounting platform built with Django (REST API) and React (Vite). Stop fighting with spreadsheets and switch to a comprehensive suite of tools designed specifically for the rigorous requirements of external ESG assurance.
+
+---
+
+## Key Features
+
+- **Scope 1 & 2 Normalisation:** Map SAP WERKS plant codes and utility meters to standard locations. Auto-convert litres, kg, and m³ to metric tonnes of CO₂e.
+- **Scope 3 Travel Automation:** Connect corporate travel APIs (Navan). Automatically calculate aviation emissions with ICAO multipliers and hotel stays by region.
+- **Immutable Audit Log:** Every approval, rejection, and value edit is permanently logged. Auditors can trace the exact factor used on the day of calculation.
+- **Predictive Forecasting:** Use Holt-Winters exponential smoothing to predict your end-of-year emissions trajectory based on historical monthly run-rates.
+- **Factor Versioning:** Maintain DEFRA, IPCC, and CEA factors with validity dates. Ensure historical reports do not change when factors are updated.
+- **SEBI BRSR Core Reports:** Auto-generated SEBI BRSR Core disclosures ready for external assurance, including mandated metrics like emissions per rupee of turnover.
+- **AI Chatbot (Text-to-SQL):** A natural language assistant powered by a LangGraph StateGraph agent. Query your emissions data directly, request row explanations, or generate reports via a validated Text-to-SQL pipeline.
 
 ---
 
@@ -131,16 +143,3 @@ BreatheESG/
 
 ---
 
-## Key API Endpoints
-
-| Endpoint | Description |
-|---|---|
-| `POST /api/v1/auth/token/` | Login — returns JWT tokens |
-| `GET /api/v1/emissions/dashboard/stats/` | Hero stats for dashboard |
-| `GET /api/v1/emissions/dashboard/` | Paginated row listing |
-| `GET /api/v1/emissions/plant-lookup/` | WERKS plant code list |
-| `POST /api/v1/emissions/plant-lookup/` | Create WERKS entry |
-| `POST /api/v1/emissions/plant-lookup/bulk-import/` | Bulk CSV import |
-| `GET /api/v1/emissions/plant-lookup/unresolved/` | Unresolved WERKS codes |
-| `GET /api/v1/emissions/plant-lookup/export/` | Export all codes as CSV |
-| `POST /api/v1/ingestion/travel/navan/sync/` | Sync travel data from Navan |

@@ -328,3 +328,28 @@ flowchart TD
 ```
 
 > Analyst path after FAILED row: download error report → fix source file → re-upload. No silent best-guess is ever attempted.
+
+---
+
+## 6 · AI CHATBOT TEXT-TO-SQL FLOW
+
+```mermaid
+flowchart TD
+    USER["User Question\n(e.g. 'Show total Scope 1')"] --> INTENT["intent_classifier"]
+    
+    INTENT -- "data_query" --> SCHEMA["schema_retriever\n(Fetch DB Schema)"]
+    SCHEMA --> SQLGEN["sql_generator\n(LLM creates SQL)"]
+    
+    SQLGEN --> VAL["sql_validator_node\n(AST & Security Check)"]
+    VAL -- "Invalid" --> SQLGEN
+    VAL -- "Valid" --> EXEC["sql_executor\n(Run readonly on DB)"]
+    
+    EXEC --> FMT["response_formatter\n(Format as Text/Table)"]
+    INTENT -- "explain/clarify" --> FMT
+    
+    FMT --> OUT["output_classifier\n(Determine UI element)"]
+    OUT --> UI["Frontend UI"]
+    
+    style EXEC fill:#22c55e,color:#fff
+    style VAL fill:#eab308,color:#fff
+```

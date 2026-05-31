@@ -125,3 +125,24 @@ flowchart LR
 
 **Risk if ignored:**
 Client has solar PPA or REC purchases → legally entitled to report lower market-based Scope 2 → using location-based only overstates emissions → reputational and disclosure accuracy risk in public BRSR filing.
+
+---
+
+## TRADEOFF 4 · Text-to-SQL vs Semantic Layer
+
+**What was NOT built:**
+- A Semantic Layer (e.g., Cube.js, dbt metrics) mapping natural language to predefined metrics.
+
+**Why not:**
+Building a robust semantic layer requires a separate infrastructure component and predefined metric definitions, which limits the free-form exploratory nature of a prototype chatbot and adds significant deployment overhead.
+
+**What was built instead:**
+Direct Text-to-SQL generation via a LangGraph agent. The LLM reads a minified DB schema and generates raw SQL queries, validated by an AST-based `sql_validator_node` to ensure read-only safety.
+
+**Production path:**
+Move towards a predefined semantic layer where the LLM generates metric requests instead of raw SQL, reducing the chance of SQL syntax errors and calculation logic hallucinations.
+
+**What must change:** Introduce a metrics definition layer; LLM queries the metrics API instead of the raw relational DB.
+
+**Risk if ignored:**
+As the schema grows complex, LLM hallucination rate on table joins increases. Complex analytical queries may fail or silently return incorrect aggregations if the LLM misinterprets a foreign key.

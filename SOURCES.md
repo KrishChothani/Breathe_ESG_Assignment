@@ -205,3 +205,34 @@ SOURCE 3: TRAVEL (Navan API — Scope 3)
 | Multi-leg itinerary entered as a single segment by traveller (BOM–LHR as one row) | Medium | High | Parser cannot detect; CO2e double-counted if both legs also appear as separate SEG records |
 | Hotel country not in emission factor DB (e.g. Middle East hotel stays) | Medium | Medium | `co2e_kg = null`; status = FLAGGED; DEFRA publishes limited hotel factors by region |
 | Navan API token expires mid-pull (OAuth 2.0 client credentials, 1-hour TTL) | High | Low | Celery task retries with exponential backoff; partial batch is rolled back and restarted |
+
+---
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SOURCE 4: LLM (AI Chatbot / Text-to-SQL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### Real-World Format Researched
+
+- **Integration:** LangGraph StateGraph orchestrating LLM calls to translate natural language into SQL.
+- **Key fields:** Schema context, User intent (`data_query`, `row_explanation`, `report_generation`, `clarify`), and actual database state.
+
+### What I Learned
+
+1. **Direct DB querying is prone to SQL errors.** LLMs frequently hallucinate column names or invalid SQL syntax. Implementing a `sql_validator_node` with a retry loop (up to 3 times) was mandatory to catch errors before execution.
+2. **Context Window limits.** Passing the entire multi-tenant schema to the LLM on every turn is expensive and slow. A `schema_retriever` node is needed to fetch only the relevant table schemas.
+3. **Safety requires AST parsing.** Simple regex is not enough to prevent SQL injection or destructive operations. The validator must ensure read-only execution (e.g., rejecting `UPDATE` or `DELETE` statements).
+
+### Sample Flow
+
+```json
+{
+  "intent": "data_query",
+  "generated_sql": "SELECT plant_code, SUM(co2e_kg) FROM emissions_saprow WHERE tenant_id = %s GROUP BY plant_code",
+  "error": null,
+  "retry_count": 0,
+  "response_type": "table"
+}
+```
